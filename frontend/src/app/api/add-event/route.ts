@@ -150,11 +150,28 @@ export async function POST(request: Request) {
 
         updatePayload.raw_prompt = prompt;
 
-        const { error: updErr } = await supabase
+        let { error: updErr } = await supabase
           .from('events')
           .update(updatePayload)
           .eq('id', item.id)
           .eq('user_id', userId);
+
+        if (updErr) {
+          // Resilient fallback: if columns do not exist in the DB, strip them and retry
+          if (updErr.message.includes('reminder_offset') || updErr.message.includes('notified')) {
+            const { reminder_offset, notified, ...fallbackPayload } = updatePayload;
+            if (Object.keys(fallbackPayload).length > 0) {
+              const { error: fallbackErr } = await supabase
+                .from('events')
+                .update(fallbackPayload)
+                .eq('id', item.id)
+                .eq('user_id', userId);
+              updErr = fallbackErr;
+            } else {
+              updErr = null; // No other changes to apply
+            }
+          }
+        }
 
         if (updErr) throw updErr;
       }
@@ -179,9 +196,20 @@ export async function POST(request: Request) {
         };
       });
 
-      const { error: addErr } = await supabase
+      let { error: addErr } = await supabase
         .from('events')
         .insert(dbPayloads);
+
+      if (addErr) {
+        // Resilient fallback: if columns do not exist in the DB, strip them and retry
+        if (addErr.message.includes('reminder_offset') || addErr.message.includes('notified')) {
+          const fallbackPayloads = dbPayloads.map(({ reminder_offset, notified, ...rest }: any) => rest);
+          const { error: fallbackErr } = await supabase
+            .from('events')
+            .insert(fallbackPayloads);
+          addErr = fallbackErr;
+        }
+      }
 
       if (addErr) throw addErr;
     }
