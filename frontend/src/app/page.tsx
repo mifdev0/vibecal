@@ -352,12 +352,12 @@ export default function Home() {
         setAssistantMessage(message);
         setChatHistory([...updatedHistory, { role: 'assistant', content: message }]);
       } else {
-        // Success! Set the events, and clear the question bubble and chat history
+        // Success! Set the events, and show the success/reminder message
         if (Array.isArray(updatedEvents)) {
           setEvents(updatedEvents);
         }
-        setAssistantMessage(null);
-        setChatHistory([]);
+        setAssistantMessage(message);
+        setChatHistory([...updatedHistory, { role: 'assistant', content: message }]);
       }
     } catch (error) {
       console.error('Error adding event:', error);
