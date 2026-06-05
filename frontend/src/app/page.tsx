@@ -710,7 +710,7 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-bento-gap mt-bento-gap">
 
           {/* Up Next List */}
-          <div className="bento-card p-6">
+          <div className="bento-card p-4 sm:p-6">
             <div className="flex items-center gap-2 mb-4">
               <span className="material-symbols-outlined text-[#3D3A6B]">nest_clock_farsight_analog</span>
               <h3 className="text-headline-md font-bold text-[#3D3A6B]" style={{ fontFamily: "'Fredoka', sans-serif" }}>{t.upNext}</h3>
@@ -718,32 +718,91 @@ export default function Home() {
             {upcoming.length === 0 ? (
               <p className="text-label-sm opacity-50 italic">{t.noUpcoming}</p>
             ) : (
-              <ul className="space-y-4">
+              <div className="space-y-3">
                 {upcoming.map((ev, idx) => {
                   const { title, location } = parseTitleAndLocation(ev.title);
+                  const vibeCat = ev.vibe_category || 'Me-Time';
+                  const categoryColors: Record<string, string> = {
+                    'Work': '#7C74C9',
+                    'Social': '#5C8A6E',
+                    'Health': '#F59E0B',
+                    'Me-Time': '#E8856A',
+                  };
+                  const categoryColor = categoryColors[vibeCat] || '#3D3A6B';
+                  const categoryEmoji = vibeCat === 'Work' ? '✎' : vibeCat === 'Social' ? '🗲' : vibeCat === 'Health' ? '♡' : vibeCat === 'Me-Time' ? '☺' : '✦';
+                  
                   return (
-                    <li key={ev.id || idx} className="flex items-center gap-4 group">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#3D3A6B] shrink-0" />
-                      <span className="text-label-bold font-bold w-12 shrink-0 text-[#3D3A6B]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{formatTime(ev.start_time)}</span>
-                      <span className="flex-grow flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 text-[#3D3A6B]">
-                        <span className="flex flex-col">
-                          <span className="font-semibold">{title}</span>
+                    <div 
+                      key={ev.id || idx} 
+                      className="relative flex gap-3 p-3 bg-white border-2 border-[#C5C0F0]/50 rounded-xl hover:shadow-[4px_4px_0px_rgba(197,192,240,0.25)] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all duration-200 group overflow-hidden"
+                    >
+                      {/* Left Color-Coded Bar */}
+                      <div 
+                        className="w-1.5 rounded-full shrink-0 animate-pulse" 
+                        style={{ backgroundColor: categoryColor }} 
+                      />
+                      
+                      {/* Right Content Area */}
+                      <div className="flex-grow flex flex-col gap-2 min-w-0">
+                        {/* Header: Time, Category Badge, Countdown */}
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {/* Time Badge */}
+                            <span 
+                              className="text-[11px] font-bold text-[#3D3A6B] bg-[#3D3A6B]/5 px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0"
+                              style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                            >
+                              <span className="material-symbols-outlined text-[13px]">schedule</span>
+                              {formatTime(ev.start_time)}
+                            </span>
+                            
+                            {/* Category Badge */}
+                            <span 
+                              className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border shrink-0"
+                              style={{ 
+                                backgroundColor: `${categoryColor}15`, 
+                                color: categoryColor, 
+                                borderColor: `${categoryColor}30` 
+                              }}
+                            >
+                              {vibeCat} {categoryEmoji}
+                            </span>
+                          </div>
+
+                          {/* Countdown Badge */}
+                          <span 
+                            className="text-[9px] font-bold text-[#3D3A6B] bg-[#E8856A]/15 border border-[#E8856A]/30 px-2 py-0.5 rounded-full shrink-0"
+                            style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                          >
+                            {getTimeUntilStart(ev.start_time)}
+                          </span>
+                        </div>
+
+                        {/* Body: Title and Location */}
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <h4 className="font-bold text-[#3D3A6B] text-sm leading-snug group-hover:text-primary transition-colors break-words">
+                            {title}
+                          </h4>
                           {location && (
-                            <span className="flex items-center gap-1 text-xs opacity-75 mt-0.5 font-bold">
-                              <span className="material-symbols-outlined text-[#E8856A]" style={{ fontSize: '14px', fontVariationSettings: "'FILL' 1" }}>location_on</span>
+                            <span className="flex items-center gap-1 text-xs text-[#3D3A6B]/70 font-semibold truncate">
+                              <span className="material-symbols-outlined text-[#E8856A] text-[13px]" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
                               {location}
                             </span>
                           )}
-                        </span>
-                        <span className="text-xs opacity-50 sm:mr-4 self-start sm:self-center">{t.duration} {getDuration(ev.start_time, ev.end_time)}</span>
-                      </span>
-                      <span className="text-xs font-bold text-[#3D3A6B] shrink-0 bg-[#E8856A]/20 border border-[#3D3A6B] px-2.5 py-0.5 rounded-full" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                        {getTimeUntilStart(ev.start_time)}
-                      </span>
-                    </li>
+                        </div>
+
+                        {/* Footer: Duration */}
+                        <div className="flex items-center justify-between text-[11px] text-[#3D3A6B]/60 font-semibold border-t border-[#C5C0F0]/20 pt-1.5 mt-0.5">
+                          <span className="flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[13px]">timelapse</span>
+                            {t.duration} {getDuration(ev.start_time, ev.end_time)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   );
                 })}
-              </ul>
+              </div>
             )}
           </div>
 
