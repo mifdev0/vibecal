@@ -10,7 +10,7 @@ export const getSessionId = () => {
   return sessionId;
 };
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 export const VIBE_COLORS: Record<string, string> = {
   'Work': '#7C74C9', // Purple (Fokus)
