@@ -146,10 +146,10 @@ export default function Calendar({ events, view, currentDate, setCurrentDate, se
     }, {} as Record<string, number>);
 
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-bento-gap">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Left Column: Dashboard Detail Card */}
         <div
-          className={`bento-card rounded-xl p-6 border-2 flex flex-col gap-6 relative overflow-hidden bg-surface-container-lowest dark:bg-inverse-surface ${
+          className={`bento-card rounded-xl p-4 md:p-6 border-2 flex flex-col gap-4 md:gap-6 relative overflow-hidden bg-surface-container-lowest dark:bg-inverse-surface ${
             active ? 'border-primary shadow-lg ring-4 ring-primary/10' : 'border-outline-variant/30'
           }`}
         >
@@ -207,7 +207,7 @@ export default function Calendar({ events, view, currentDate, setCurrentDate, se
         </div>
 
         {/* Right Column: Daily Agenda Timeline */}
-        <div className="lg:col-span-2 bento-card bg-surface-container-low rounded-xl p-6 border border-outline-variant/30 min-h-[400px] flex flex-col gap-4">
+        <div className="lg:col-span-2 bento-card bg-surface-container-low rounded-xl p-4 md:p-6 border border-outline-variant/30 min-h-[350px] md:min-h-[400px] flex flex-col gap-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-primary">format_list_bulleted</span>
@@ -287,14 +287,14 @@ export default function Calendar({ events, view, currentDate, setCurrentDate, se
     return (
       <div className="flex flex-col">
         {/* Weekday headers */}
-        <div className="grid grid-cols-7 gap-bento-gap mb-2 text-center text-xs font-bold tracking-widest opacity-60 uppercase text-[#3D3A6B]" style={{ fontFamily: "'Fredoka', sans-serif" }}>
+        <div className="grid grid-cols-7 gap-1 md:gap-3 mb-2 text-center text-[10px] md:text-xs font-bold tracking-widest opacity-60 uppercase text-[#3D3A6B]" style={{ fontFamily: "'Fredoka', sans-serif" }}>
           {(lang === 'id' ? ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'] : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']).map(label => (
             <div key={label} className="py-1">{label}</div>
           ))}
         </div>
 
         {/* 6-row Bento Grid */}
-        <div className="grid grid-cols-7 gap-bento-gap">
+        <div className="grid grid-cols-7 gap-1 md:gap-3">
           {monthDays.map((day, idx) => {
             const dayEvents = getEventsForDate(day);
             const active = isToday(day);
@@ -309,7 +309,7 @@ export default function Calendar({ events, view, currentDate, setCurrentDate, se
                   setCurrentDate(day);
                   setView('timeGridDay');
                 }}
-                className={`bento-card min-h-[90px] md:min-h-[130px] p-2 md:p-3 flex flex-col gap-1 md:gap-1.5 border rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-transform cursor-pointer relative overflow-hidden ${
+                className={`bento-card min-h-[60px] sm:min-h-[90px] md:min-h-[130px] p-1 md:p-3 flex flex-col gap-1 md:gap-1.5 border rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-transform cursor-pointer relative overflow-hidden ${
                   active 
                     ? 'border-2 border-primary shadow-lg ring-4 ring-primary/10 bg-surface-container-lowest dark:bg-inverse-surface' 
                     : 'border-outline-variant/20 bg-surface-container-low dark:bg-surface-variant/10'
@@ -393,7 +393,7 @@ export default function Calendar({ events, view, currentDate, setCurrentDate, se
 
   // 3. Render Week View (Default)
   return (
-    <div className="grid grid-cols-1 md:grid-cols-7 gap-bento-gap">
+    <div className="grid grid-cols-1 md:grid-cols-7 gap-3 md:gap-4">
       {weekDays.map((day, idx) => {
         const dayEvents = getEventsForDate(day);
         const active = isToday(day);
@@ -411,7 +411,7 @@ export default function Calendar({ events, view, currentDate, setCurrentDate, se
                 setCurrentDate(day);
                 setView('timeGridDay');
               }}
-              className="bento-card rounded-xl p-4 border-2 border-primary shadow-lg ring-4 ring-primary/10 min-h-[300px] flex flex-col gap-3 scale-[1.02] relative overflow-hidden bg-surface-container-lowest dark:bg-inverse-surface cursor-pointer hover:shadow-2xl transition-all duration-200"
+              className="bento-card rounded-xl p-3 md:p-4 border-2 border-primary shadow-lg ring-4 ring-primary/10 min-h-[140px] md:min-h-[300px] flex flex-col gap-2 md:gap-3 scale-[1.02] relative overflow-hidden bg-surface-container-lowest dark:bg-inverse-surface cursor-pointer hover:shadow-2xl transition-all duration-200"
             >
               <div className="flex justify-between items-start mb-2">
                 <span className="text-label-bold font-bold tracking-wider text-primary dark:text-primary-fixed-dim" style={{ fontFamily: "'DM Sans', sans-serif" }}>
@@ -460,7 +460,7 @@ export default function Calendar({ events, view, currentDate, setCurrentDate, se
               setCurrentDate(day);
               setView('timeGridDay');
             }}
-            className={`cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform duration-200 bento-card rounded-xl p-4 border border-outline-variant/30 min-h-[300px] flex flex-col gap-3 bg-surface-container-low dark:bg-surface-variant/10 ${isEmpty && isWeekend ? 'vibe-dot-grid' : ''}`}
+            className={`cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform duration-200 bento-card rounded-xl p-3 md:p-4 border border-outline-variant/30 min-h-[140px] md:min-h-[300px] flex flex-col gap-2 md:gap-3 bg-surface-container-low dark:bg-surface-variant/10 ${isEmpty && isWeekend ? 'vibe-dot-grid' : ''}`}
           >
             <div className="flex justify-between items-start mb-2">
               <span className="text-label-bold font-bold tracking-wider opacity-60 text-on-surface dark:text-inverse-on-surface font-bold" style={{ fontFamily: "'DM Sans', sans-serif" }}>

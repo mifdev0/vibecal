@@ -1,0 +1,17 @@
+{
+  "name": "VibeCal - AI Calendar",
+  "short_name": "VibeCal",
+  "description": "Natural language smart calendar scheduling.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFBF5",
+  "theme_color": "#7C74C9",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

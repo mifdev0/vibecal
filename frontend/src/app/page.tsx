@@ -544,112 +544,149 @@ export default function Home() {
       style={{ fontFamily: "'Fredoka', sans-serif, sans-serif" }}
     >
       {/* Top Navigation Bar */}
-      <header className="flex flex-col md:flex-row justify-between items-center gap-4 w-full px-container-padding-mobile md:px-container-padding-desktop py-4 z-50 backdrop-blur-xl bg-surface/80 sticky top-0 border-b-2 border-[#3D3A6B]/30">
-        <div className="flex justify-between items-center w-full md:w-auto gap-8">
-          <div className="flex items-center gap-3">
-            <img 
-              src="/logo.png" 
-              alt="VibeCal Logo" 
-              className="h-10 w-10 object-contain select-none" 
-            />
-            <div className="flex flex-col">
-              <span className="text-xl md:text-2xl font-extrabold text-[#3D3A6B] select-none leading-none" style={{ fontFamily: "'Fredoka', sans-serif" }}>
-                VibeCal
-              </span>
-              <span className="text-[11px] font-bold text-[#E8856A] uppercase tracking-wider mt-1" style={{ fontFamily: "'Fredoka', sans-serif" }}>
-                Halo {getGreeting()}, {getFirstName(user.full_name)}! ✦
-              </span>
-            </div>
-          </div>
+      <header className="w-full px-4 py-3 z-50 backdrop-blur-xl bg-surface/90 sticky top-0 border-b-2 border-[#3D3A6B]/30">
+        <div className="max-w-[1400px] mx-auto flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           
-          {/* Segmented View Control */}
-          <div className="flex bg-white p-1 sketch-border-sm border-[#3D3A6B] gap-1">
-            {[
-              { id: 'timeGridDay', label: lang === 'id' ? 'Hari' : 'Day' },
-              { id: 'timeGridWeek', label: lang === 'id' ? 'Minggu' : 'Week' },
-              { id: 'dayGridMonth', label: lang === 'id' ? 'Bulan' : 'Month' },
-            ].map(v => (
+          {/* Top row: Logo/Greeting & Actions */}
+          <div className="flex justify-between items-center w-full md:w-auto">
+            <div className="flex items-center gap-3">
+              <img 
+                src="/logo.png" 
+                alt="VibeCal Logo" 
+                className="h-10 w-10 object-contain select-none" 
+              />
+              <div className="flex flex-col">
+                <span className="text-xl md:text-2xl font-extrabold text-[#3D3A6B] select-none leading-none" style={{ fontFamily: "'Fredoka', sans-serif" }}>
+                  VibeCal
+                </span>
+                <span className="text-[11px] font-bold text-[#E8856A] uppercase tracking-wider mt-1" style={{ fontFamily: "'Fredoka', sans-serif" }}>
+                  Halo {getGreeting()}, {getFirstName(user.full_name)}! ✦
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Actions (only visible on mobile to save vertical space) */}
+            <div className="flex items-center gap-1.5 md:hidden">
               <button
-                key={v.id}
-                onClick={() => setView(v.id)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold tracking-wider transition-all cursor-pointer ${
-                  view === v.id
-                    ? 'doodle-btn bg-[#E8856A] text-[#3D3A6B]'
-                    : 'text-[#3D3A6B] opacity-60 hover:opacity-100'
-                }`}
+                onClick={() => setLang(lang === 'id' ? 'en' : 'id')}
+                className="doodle-btn px-2.5 py-1 text-xs font-bold text-[#3D3A6B] bg-[#E8856A]/10 hover:bg-[#E8856A]/25 transition-colors cursor-pointer active:scale-95 flex items-center gap-1"
                 style={{ fontFamily: "'Fredoka', sans-serif" }}
               >
-                {v.label}
+                <span className="material-symbols-outlined text-[#3D3A6B]" style={{ fontSize: '14px' }}>language</span>
+                {lang === 'id' ? 'ID' : 'EN'}
               </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between md:justify-end w-full md:w-auto gap-6">
-          {/* Date Navigation Controls */}
-          <div className="flex items-center bg-white px-2 py-1 sketch-border-sm border-[#3D3A6B] gap-1">
-            <button
-              onClick={handlePrev}
-              className="p-1 hover:bg-[#E8856A]/10 rounded-lg transition-colors cursor-pointer active:scale-95 flex items-center justify-center"
-              title="Sebelumnya"
-            >
-              <span className="material-symbols-outlined text-[#3D3A6B]" style={{ fontSize: '20px' }}>chevron_left</span>
-            </button>
-            <button
-              onClick={handleToday}
-              className="px-2.5 py-0.5 hover:bg-[#E8856A]/10 rounded-lg text-[11px] font-bold text-[#3D3A6B] transition-all cursor-pointer active:scale-95"
-              style={{ fontFamily: "'Fredoka', sans-serif" }}
-            >
-              {view === 'timeGridDay' ? t.today : view === 'timeGridWeek' ? t.thisWeek : t.thisMonth}
-            </button>
-            <button
-              onClick={handleNext}
-              className="p-1 hover:bg-[#E8856A]/10 rounded-lg transition-colors cursor-pointer active:scale-95 flex items-center justify-center"
-              title="Selanjutnya"
-            >
-              <span className="material-symbols-outlined text-[#3D3A6B]" style={{ fontSize: '20px' }}>chevron_right</span>
-            </button>
+              <button
+                onClick={() => fetchEvents(userId)}
+                className="p-1.5 hover:bg-[#E8856A]/10 rounded-full transition-colors cursor-pointer active:scale-95"
+                title="Sinkronisasi"
+              >
+                <span className={`material-symbols-outlined text-[#3D3A6B] text-lg ${isSyncing ? 'animate-spin' : ''}`}>
+                  {isSyncing ? 'progress_activity' : 'calendar_today'}
+                </span>
+              </button>
+              <button
+                onClick={handleLogout}
+                className="p-1.5 hover:bg-[#DC2626]/10 rounded-full transition-colors cursor-pointer active:scale-95 text-[#DC2626] flex items-center justify-center"
+                title={t.logoutTooltip}
+              >
+                <span className="material-symbols-outlined text-lg">logout</span>
+              </button>
+            </div>
           </div>
 
-          <h2 className="text-xl md:text-headline-md text-[#3D3A6B] select-none font-bold whitespace-nowrap" style={{ fontFamily: "'Fredoka', sans-serif" }}>
-            {currentMonth} {currentYear}
-          </h2>
+          {/* Bottom row on mobile, Right side on desktop: View Selector, Navigation and Date */}
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+            {/* View Selector (Hari, Minggu, Bulan) */}
+            <div className="flex bg-white p-1 sketch-border-sm border-[#3D3A6B] gap-1 w-full sm:w-auto">
+              {[
+                { id: 'timeGridDay', label: lang === 'id' ? 'Hari' : 'Day' },
+                { id: 'timeGridWeek', label: lang === 'id' ? 'Minggu' : 'Week' },
+                { id: 'dayGridMonth', label: lang === 'id' ? 'Bulan' : 'Month' },
+              ].map(v => (
+                <button
+                  key={v.id}
+                  onClick={() => setView(v.id)}
+                  className={`flex-1 sm:flex-initial text-center px-3 py-1.5 md:py-1 rounded-lg text-xs font-bold tracking-wider transition-all cursor-pointer ${
+                    view === v.id
+                      ? 'doodle-btn bg-[#E8856A] text-[#3D3A6B]'
+                      : 'text-[#3D3A6B] opacity-60 hover:opacity-100'
+                  }`}
+                  style={{ fontFamily: "'Fredoka', sans-serif" }}
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
 
-          <div className="flex items-center gap-2">
-            {/* Language Switcher Toggle */}
-            <button
-              onClick={() => setLang(lang === 'id' ? 'en' : 'id')}
-              className="doodle-btn px-2.5 py-1 text-xs font-bold text-[#3D3A6B] bg-[#E8856A]/10 hover:bg-[#E8856A]/25 transition-colors cursor-pointer active:scale-95 flex items-center gap-1.5"
-              style={{ fontFamily: "'Fredoka', sans-serif" }}
-            >
-              <span className="material-symbols-outlined text-[#3D3A6B]" style={{ fontSize: '16px' }}>language</span>
-              {lang === 'id' ? 'ID' : 'EN'}
-            </button>
+            {/* Date Navigation & Date Title */}
+            <div className="flex items-center justify-between sm:justify-start gap-4 w-full sm:w-auto">
+              <div className="flex items-center bg-white px-2 py-1 sketch-border-sm border-[#3D3A6B] gap-1">
+                <button
+                  onClick={handlePrev}
+                  className="p-1 hover:bg-[#E8856A]/10 rounded-lg transition-colors cursor-pointer active:scale-95 flex items-center justify-center"
+                  title="Sebelumnya"
+                >
+                  <span className="material-symbols-outlined text-[#3D3A6B]" style={{ fontSize: '20px' }}>chevron_left</span>
+                </button>
+                <button
+                  onClick={handleToday}
+                  className="px-2.5 py-0.5 hover:bg-[#E8856A]/10 rounded-lg text-[11px] font-bold text-[#3D3A6B] transition-all cursor-pointer active:scale-95"
+                  style={{ fontFamily: "'Fredoka', sans-serif" }}
+                >
+                  {view === 'timeGridDay' ? t.today : view === 'timeGridWeek' ? t.thisWeek : t.thisMonth}
+                </button>
+                <button
+                  onClick={handleNext}
+                  className="p-1 hover:bg-[#E8856A]/10 rounded-lg transition-colors cursor-pointer active:scale-95 flex items-center justify-center"
+                  title="Selanjutnya"
+                >
+                  <span className="material-symbols-outlined text-[#3D3A6B]" style={{ fontSize: '20px' }}>chevron_right</span>
+                </button>
+              </div>
 
-            <button
-              onClick={() => fetchEvents(userId)}
-              className="p-2 hover:bg-[#E8856A]/10 rounded-full transition-colors cursor-pointer active:scale-95"
-            >
-              <span className={`material-symbols-outlined text-[#3D3A6B] ${isSyncing ? 'animate-spin' : ''}`}>
-                {isSyncing ? 'progress_activity' : 'calendar_today'}
-              </span>
-            </button>
-            <button className="p-2 hover:bg-[#E8856A]/10 rounded-full transition-colors cursor-pointer active:scale-95">
-              <span className="material-symbols-outlined text-[#3D3A6B]">settings</span>
-            </button>
-            <button
-              onClick={handleLogout}
-              className="p-2 hover:bg-[#DC2626]/10 rounded-full transition-colors cursor-pointer active:scale-95 text-[#DC2626] flex items-center justify-center"
-              title={t.logoutTooltip}
-            >
-              <span className="material-symbols-outlined">logout</span>
-            </button>
+              <h2 className="text-lg md:text-headline-md text-[#3D3A6B] select-none font-bold min-w-[120px] text-right sm:text-left" style={{ fontFamily: "'Fredoka', sans-serif" }}>
+                {currentMonth} {currentYear}
+              </h2>
+            </div>
+
+            {/* Desktop Actions Only */}
+            <div className="hidden md:flex items-center gap-2">
+              <button
+                onClick={() => setLang(lang === 'id' ? 'en' : 'id')}
+                className="doodle-btn px-2.5 py-1 text-xs font-bold text-[#3D3A6B] bg-[#E8856A]/10 hover:bg-[#E8856A]/25 transition-colors cursor-pointer active:scale-95 flex items-center gap-1.5"
+                style={{ fontFamily: "'Fredoka', sans-serif" }}
+              >
+                <span className="material-symbols-outlined text-[#3D3A6B]" style={{ fontSize: '16px' }}>language</span>
+                {lang === 'id' ? 'ID' : 'EN'}
+              </button>
+
+              <button
+                onClick={() => fetchEvents(userId)}
+                className="p-2 hover:bg-[#E8856A]/10 rounded-full transition-colors cursor-pointer active:scale-95"
+                title="Sinkronisasi"
+              >
+                <span className={`material-symbols-outlined text-[#3D3A6B] ${isSyncing ? 'animate-spin' : ''}`}>
+                  {isSyncing ? 'progress_activity' : 'calendar_today'}
+                </span>
+              </button>
+              <button className="p-2 hover:bg-[#E8856A]/10 rounded-full transition-colors cursor-pointer active:scale-95">
+                <span className="material-symbols-outlined text-[#3D3A6B]">settings</span>
+              </button>
+              <button
+                onClick={handleLogout}
+                className="p-2 hover:bg-[#DC2626]/10 rounded-full transition-colors cursor-pointer active:scale-95 text-[#DC2626] flex items-center justify-center"
+                title={t.logoutTooltip}
+              >
+                <span className="material-symbols-outlined">logout</span>
+              </button>
+            </div>
           </div>
+
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-[1400px] mx-auto px-container-padding-mobile md:px-container-padding-desktop py-bento-gap pb-32">
+      <main className="max-w-[1400px] mx-auto px-4 md:px-8 py-4 pb-48 md:pb-32">
 
         {/* Loading indicator */}
         {(isLoading || isSyncing) && (

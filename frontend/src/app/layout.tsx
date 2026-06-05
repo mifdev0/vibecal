@@ -4,6 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "VibeCal ✦ — AI-Powered Harmony",
   description: "Natural language smart calendar scheduling. Talk or type to instantly plan your day, week, or month.",
+  manifest: "/manifest.json",
   icons: {
     icon: "/logo.png",
   },
