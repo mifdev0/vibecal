@@ -109,19 +109,50 @@ export async function POST(request: Request) {
     // 4. Process UPDATE Actions
     if (eventData.actions.update && Array.isArray(eventData.actions.update) && eventData.actions.update.length > 0) {
       for (const item of eventData.actions.update) {
-        let loc = item.location || '';
-        if (loc) {
-          loc = loc.replace(/^[(\s📍\u{1F4CD}]+|[)\s]+$/gu, '').trim();
+        const updatePayload: any = {};
+
+        if (item.event_title !== undefined) {
+          let loc = item.location || '';
+          if (loc) {
+            loc = loc.replace(/^[(\s📍\u{1F4CD}]+|[)\s]+$/gu, '').trim();
+          }
+          updatePayload.title = loc ? `${item.event_title} || ${loc}` : item.event_title;
+        } else if (item.location !== undefined) {
+          // If only location is updated, fetch current title to append it
+          const { data: currentEvent } = await supabase
+            .from('events')
+            .select('title')
+            .eq('id', item.id)
+            .maybeSingle();
+          if (currentEvent) {
+            const currentTitlePart = currentEvent.title.split(' || ')[0];
+            let loc = item.location;
+            if (loc) {
+              loc = loc.replace(/^[(\s📍\u{1F4CD}]+|[)\s]+$/gu, '').trim();
+            }
+            updatePayload.title = loc ? `${currentTitlePart} || ${loc}` : currentTitlePart;
+          }
         }
+
+        if (item.start_date !== undefined && item.start_time !== undefined) {
+          updatePayload.start_time = `${item.start_date}T${item.start_time}:00${offset}`;
+        }
+        if (item.start_date !== undefined && item.end_time !== undefined) {
+          updatePayload.end_time = `${item.start_date}T${item.end_time}:00${offset}`;
+        }
+        if (item.vibe_category !== undefined) {
+          updatePayload.vibe_category = item.vibe_category;
+        }
+        if (item.reminder_offset !== undefined) {
+          updatePayload.reminder_offset = item.reminder_offset;
+          updatePayload.notified = false; // Reset notified state so they can receive updates
+        }
+
+        updatePayload.raw_prompt = prompt;
+
         const { error: updErr } = await supabase
           .from('events')
-          .update({
-            title: loc ? `${item.event_title} || ${loc}` : item.event_title,
-            start_time: `${item.start_date}T${item.start_time}:00${offset}`,
-            end_time: `${item.start_date}T${item.end_time}:00${offset}`,
-            vibe_category: item.vibe_category,
-            raw_prompt: prompt
-          })
+          .update(updatePayload)
           .eq('id', item.id)
           .eq('user_id', userId);
 
@@ -142,6 +173,8 @@ export async function POST(request: Request) {
           start_time: `${event.start_date}T${event.start_time}:00${offset}`,
           end_time: `${event.start_date}T${event.end_time}:00${offset}`,
           vibe_category: event.vibe_category,
+          reminder_offset: event.reminder_offset !== undefined ? event.reminder_offset : 15,
+          notified: false,
           raw_prompt: prompt
         };
       });
