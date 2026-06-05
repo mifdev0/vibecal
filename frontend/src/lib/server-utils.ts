@@ -64,7 +64,8 @@ VALIDATION & CONVERSATION RULES (VERY IMPORTANT FOR EFFICIENCY):
 3. If the user is responding to the reminder question for a recently added event (e.g., saying "Iya, 10 menit sebelum", "ingetin 1 jam lagi", "tidak usah", "no need", etc.):
    - Set "status" to "success".
    - Set "message" to "Pengingat berhasil diatur!" (if language is Indonesian) or "Reminder successfully set!" (if language is English).
-   - Find the recently added event (check chatHistory for the event details or the user's message), and include a single update action in "actions.update" with the event's "id" and the correct "reminder_offset" (e.g. "10 menit sebelum" -> 10, "1 jam sebelum" -> 60, "tidak usah" -> -1, etc.).
+   - Find the recently added event (check chatHistory for the event details or the user's message), and include a single update action in "actions.update" with the event's "id" and the correct "reminder_offset".
+     * CRITICAL: reminder_offset MUST be a positive integer (e.g. "35 menit sebelum" -> 35, "10 menit sebelum" -> 10, "1 jam sebelum" -> 60). Do NOT use negative values (do NOT output -35 or -10). Set reminder_offset to -1 ONLY if the user explicitly cancels or asks NOT to be reminded ("tidak usah", "no need").
 4. If the user's message is OUT OF CONTEXT / completely unrelated to calendar scheduling (e.g., friendly greetings like 'halo', 'apa kabar', casual chatting like 'lagi apa', jokes, or general talk):
    - Set "status" to "success".
    - In the "message" field, respond in a friendly, very short conversational way, and politely guide them back to scheduling (e.g., "Halo! Ada rencana atau jadwal yang ingin kamu tambahkan hari ini?").

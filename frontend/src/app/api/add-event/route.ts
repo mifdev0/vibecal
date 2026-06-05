@@ -157,8 +157,8 @@ export async function POST(request: Request) {
           .eq('user_id', userId);
 
         if (updErr) {
-          // Resilient fallback: if columns do not exist in the DB, strip them and retry
-          if (updErr.message.includes('reminder_offset') || updErr.message.includes('notified')) {
+          // Resilient fallback: if columns do not exist in the DB (Postgres 42703), strip them and retry
+          if (updErr.code === '42703' || updErr.message.includes('reminder_offset') || updErr.message.includes('notified')) {
             const { reminder_offset, notified, ...fallbackPayload } = updatePayload;
             if (Object.keys(fallbackPayload).length > 0) {
               const { error: fallbackErr } = await supabase
@@ -201,8 +201,8 @@ export async function POST(request: Request) {
         .insert(dbPayloads);
 
       if (addErr) {
-        // Resilient fallback: if columns do not exist in the DB, strip them and retry
-        if (addErr.message.includes('reminder_offset') || addErr.message.includes('notified')) {
+        // Resilient fallback: if columns do not exist in the DB (Postgres 42703), strip them and retry
+        if (addErr.code === '42703' || addErr.message.includes('reminder_offset') || addErr.message.includes('notified')) {
           const fallbackPayloads = dbPayloads.map(({ reminder_offset, notified, ...rest }: any) => rest);
           const { error: fallbackErr } = await supabase
             .from('events')
