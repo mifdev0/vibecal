@@ -197,6 +197,29 @@ export default function Home() {
     }
   }, [lang, isMounted]);
 
+  useEffect(() => {
+    if (isMounted && user) {
+      const params = new URLSearchParams(window.location.search);
+      const action = params.get('action');
+      
+      if (action === 'add') {
+        setTimeout(() => {
+          const inputEl = document.getElementById('prompt-input');
+          if (inputEl) {
+            inputEl.focus();
+          }
+        }, 500);
+      } else if (action === 'calendar') {
+        setTimeout(() => {
+          const calendarEl = document.getElementById('calendar-container');
+          if (calendarEl) {
+            calendarEl.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 600);
+      }
+    }
+  }, [isMounted, user]);
+
   const t = translations[lang];
   const months = lang === 'id' ? monthsID : monthsEN;
   const currentMonth = months[currentDate.getMonth()];
@@ -748,14 +771,16 @@ export default function Home() {
         )}
 
         {/* Bento Grid Calendar View */}
-        <Calendar 
-          events={events} 
-          view={view} 
-          currentDate={currentDate} 
-          setCurrentDate={setCurrentDate} 
-          setView={setView} 
-          lang={lang}
-        />
+        <div id="calendar-container">
+          <Calendar 
+            events={events} 
+            view={view} 
+            currentDate={currentDate} 
+            setCurrentDate={setCurrentDate} 
+            setView={setView} 
+            lang={lang}
+          />
+        </div>
 
         {/* Bottom Sections */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-bento-gap mt-bento-gap">

@@ -104,6 +104,7 @@ const PromptBar: React.FC<PromptBarProps> = ({ onSend, onUploadImage, isLoading,
 
         {/* Input */}
         <input
+          id="prompt-input"
           type="text"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}

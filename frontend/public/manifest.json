@@ -13,5 +13,33 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Tambah Jadwal Baru",
+      "short_name": "Tambah Jadwal",
+      "description": "Tulis rencana jadwal baru dengan asisten AI",
+      "url": "/?action=add",
+      "icons": [
+        {
+          "src": "/logo.png",
+          "sizes": "512x512",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Lihat Kalender",
+      "short_name": "Kalender",
+      "description": "Lihat daftar jadwal kalender hari ini",
+      "url": "/?action=calendar",
+      "icons": [
+        {
+          "src": "/logo.png",
+          "sizes": "512x512",
+          "type": "image/png"
+        }
+      ]
+    }
   ]
 }
