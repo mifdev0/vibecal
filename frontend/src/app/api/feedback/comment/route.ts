@@ -74,3 +74,75 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Gagal menambahkan komentar', details: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const feedbackId = searchParams.get('feedbackId');
+    const commentId = searchParams.get('commentId');
+    const userId = searchParams.get('userId');
+
+    if (!feedbackId || !commentId || !userId) {
+      return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
+    }
+
+    // 1. Get user details to check developer status
+    const { data: user, error: userErr } = await supabase
+      .from('users_custom')
+      .select('email')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (userErr) throw userErr;
+    const isDeveloper = user?.email?.toLowerCase() === 'mifthahulamri@gmail.com';
+
+    // 2. Fetch feedback comments
+    const { data: post, error: postErr } = await supabase
+      .from('feedback_forum')
+      .select('comments')
+      .eq('id', feedbackId)
+      .maybeSingle();
+
+    if (postErr) throw postErr;
+    if (!post) {
+      return NextResponse.json({ error: 'Post feedback tidak ditemukan' }, { status: 404 });
+    }
+
+    const currentComments = Array.isArray(post.comments) ? post.comments : [];
+    const commentToDelete = currentComments.find((c: any) => c.id === commentId);
+
+    if (!commentToDelete) {
+      return NextResponse.json({ error: 'Komentar tidak ditemukan' }, { status: 404 });
+    }
+
+    // Only owner of the comment or developer can delete
+    if (commentToDelete.user_id !== userId && !isDeveloper) {
+      return NextResponse.json({ error: 'Anda tidak memiliki akses untuk menghapus komentar ini' }, { status: 403 });
+    }
+
+    const updatedComments = currentComments.filter((c: any) => c.id !== commentId);
+
+    // 3. Update database
+    const { data: updatedPost, error: updateErr } = await supabase
+      .from('feedback_forum')
+      .update({ comments: updatedComments })
+      .eq('id', feedbackId)
+      .select(`
+        *,
+        author:users_custom(full_name, username, profile_picture, email)
+      `)
+      .single();
+
+    if (updateErr) throw updateErr;
+
+    return NextResponse.json({
+      status: 'success',
+      feedback: updatedPost
+    });
+
+  } catch (error: any) {
+    console.error('Error deleting comment:', error);
+    return NextResponse.json({ error: 'Gagal menghapus komentar', details: error.message }, { status: 500 });
+  }
+}
+

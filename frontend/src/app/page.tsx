@@ -154,6 +154,7 @@ export default function Home() {
   const [feedbackImage, setFeedbackImage] = useState<string | null>(null);
   const [forumError, setForumError] = useState<string | null>(null);
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const [commentingPostId, setCommentingPostId] = useState<string | null>(null);
 
   // Editing feedback post state
   const [editingFeedbackId, setEditingFeedbackId] = useState<string | null>(null);
@@ -510,8 +511,9 @@ export default function Home() {
   const handleAddComment = async (e: React.FormEvent, feedbackId: string) => {
     e.preventDefault();
     const commentText = commentInputs[feedbackId];
-    if (!commentText || !commentText.trim()) return;
+    if (!commentText || !commentText.trim() || commentingPostId) return;
 
+    setCommentingPostId(feedbackId);
     try {
       const response = await axios.post(`${API_BASE_URL}/api/feedback/comment`, {
         feedbackId,
@@ -525,6 +527,24 @@ export default function Home() {
       }
     } catch (err) {
       console.error('Error adding comment:', err);
+    } finally {
+      setCommentingPostId(null);
+    }
+  };
+
+  const handleDeleteComment = async (feedbackId: string, commentId: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus komentar ini?')) return;
+
+    try {
+      const response = await axios.delete(
+        `${API_BASE_URL}/api/feedback/comment?feedbackId=${feedbackId}&commentId=${commentId}&userId=${userId}`
+      );
+      if (response.data.status === 'success') {
+        setFeedbacks(feedbacks.map(f => f.id === feedbackId ? response.data.feedback : f));
+      }
+    } catch (err: any) {
+      console.error('Error deleting comment:', err);
+      alert(err.response?.data?.error || 'Gagal menghapus komentar');
     }
   };
 
@@ -1768,30 +1788,41 @@ export default function Home() {
                             {fb.comments.map((comment: any) => {
                               const isCommentDev = comment.is_developer || comment.username === 'mifdev0';
                               return (
-                                <div key={comment.id} className={`pt-3 first:pt-0 flex gap-2 items-start ${isCommentDev ? 'bg-[#E8856A]/5 p-2 rounded-lg' : ''}`}>
-                                  {comment.profile_picture ? (
-                                    <img 
-                                      src={comment.profile_picture} 
-                                      alt="Avatar" 
-                                      className="h-7 w-7 rounded-full object-cover border border-[#3D3A6B] mt-0.5 shrink-0" 
-                                    />
-                                  ) : (
-                                    <div className="h-7 w-7 rounded-full bg-[#E8856A]/10 border border-[#3D3A6B] flex items-center justify-center shrink-0 mt-0.5">
-                                      <span className="material-symbols-outlined text-xs text-[#3D3A6B]">account_circle</span>
+                                <div key={comment.id} className={`pt-3 first:pt-0 flex gap-2 items-start justify-between ${isCommentDev ? 'bg-[#E8856A]/5 p-2 rounded-lg' : ''}`}>
+                                  <div className="flex gap-2 items-start min-w-0 flex-grow">
+                                    {comment.profile_picture ? (
+                                      <img 
+                                        src={comment.profile_picture} 
+                                        alt="Avatar" 
+                                        className="h-7 w-7 rounded-full object-cover border border-[#3D3A6B] mt-0.5 shrink-0" 
+                                      />
+                                    ) : (
+                                      <div className="h-7 w-7 rounded-full bg-[#E8856A]/10 border border-[#3D3A6B] flex items-center justify-center shrink-0 mt-0.5">
+                                        <span className="material-symbols-outlined text-xs text-[#3D3A6B]">account_circle</span>
+                                      </div>
+                                    )}
+                                    <div className="min-w-0 flex-grow">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-xs font-bold text-[#3D3A6B]">{comment.user_name}</span>
+                                        <span className="text-[10px] text-[#3D3A6B]/60">@{comment.username}</span>
+                                        {isCommentDev && (
+                                          <span className="bg-[#3D3A6B] text-white text-[8px] font-extrabold px-1.5 py-0.5 rounded border border-[#E8856A] flex items-center gap-0.5 select-none" style={{ height: '14px' }}>
+                                            <span className="material-symbols-outlined text-[8px] text-[#E8856A]" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>Dev ✦
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-[#3D3A6B]/80 mt-1 whitespace-pre-wrap leading-relaxed">{comment.content}</p>
                                     </div>
-                                  )}
-                                  <div className="flex-grow min-w-0">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="text-xs font-bold text-[#3D3A6B]">{comment.user_name}</span>
-                                      <span className="text-[10px] text-[#3D3A6B]/60">@{comment.username}</span>
-                                      {isCommentDev && (
-                                        <span className="bg-[#3D3A6B] text-white text-[8px] font-extrabold px-1.5 py-0.5 rounded border border-[#E8856A] flex items-center gap-0.5 select-none" style={{ height: '14px' }}>
-                                          <span className="material-symbols-outlined text-[8px] text-[#E8856A]" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>Dev ✦
-                                        </span>
-                                      )}
-                                    </div>
-                                    <p className="text-xs text-[#3D3A6B]/80 mt-1 whitespace-pre-wrap leading-relaxed">{comment.content}</p>
                                   </div>
+                                  {(comment.user_id === userId || user?.email?.toLowerCase() === 'mifthahulamri@gmail.com') && (
+                                    <button
+                                      onClick={() => handleDeleteComment(fb.id, comment.id)}
+                                      className="p-1 hover:bg-[#DC2626]/10 rounded-md transition-colors cursor-pointer text-[#DC2626] opacity-60 hover:opacity-100 shrink-0 self-center"
+                                      title="Hapus Komentar"
+                                    >
+                                      <span className="material-symbols-outlined text-xs" style={{ fontSize: '13px' }}>delete</span>
+                                    </button>
+                                  )}
                                 </div>
                               );
                             })}
@@ -1802,16 +1833,22 @@ export default function Home() {
                         <form onSubmit={(e) => handleAddComment(e, fb.id)} className="flex items-center gap-2 mt-2 pt-2 border-t border-[#3D3A6B]/5">
                           <input
                             type="text"
+                            disabled={commentingPostId === fb.id}
                             value={commentInputs[fb.id] || ''}
                             onChange={(e) => setCommentInputs({ ...commentInputs, [fb.id]: e.target.value })}
-                            placeholder="Tulis balasan atau tanggapan..."
-                            className="w-full bg-white sketch-border-sm border-[#3D3A6B] px-3 py-1.5 outline-none text-[#3D3A6B] text-xs focus:ring-1 focus:ring-[#E8856A]"
+                            placeholder={commentingPostId === fb.id ? "Mengirim..." : "Tulis balasan atau tanggapan..."}
+                            className="w-full bg-white sketch-border-sm border-[#3D3A6B] px-3 py-1.5 outline-none text-[#3D3A6B] text-xs focus:ring-1 focus:ring-[#E8856A] disabled:opacity-50"
                           />
                           <button
                             type="submit"
-                            className="doodle-btn px-3 py-1.5 bg-[#E8856A] text-[#3D3A6B] text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1"
+                            disabled={commentingPostId !== null}
+                            className="doodle-btn px-3 py-1.5 bg-[#E8856A] text-[#3D3A6B] text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1 disabled:opacity-50"
                           >
-                            <span className="material-symbols-outlined text-xs">send</span>
+                            {commentingPostId === fb.id ? (
+                              <span className="material-symbols-outlined text-xs animate-spin" style={{ fontSize: '12px' }}>progress_activity</span>
+                            ) : (
+                              <span className="material-symbols-outlined text-xs">send</span>
+                            )}
                             Balas
                           </button>
                         </form>
