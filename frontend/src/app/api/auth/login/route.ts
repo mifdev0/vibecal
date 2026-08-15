@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const isEmail = identifier.includes('@');
     const query = supabase
       .from('users_custom')
-      .select('id, full_name, email, username, password_hash, salt');
+      .select('*');
 
     const { data: user, error } = isEmail 
       ? await query.eq('email', identifier.toLowerCase()).maybeSingle()
@@ -37,6 +37,7 @@ export async function POST(request: Request) {
         full_name: user.full_name,
         email: user.email,
         username: user.username,
+        profile_picture: user.profile_picture || null,
       }
     }, { status: 200 });
 

@@ -125,6 +125,24 @@ export default function Home() {
   const [password, setPassword] = useState('');
   const [identifier, setIdentifier] = useState('');
 
+  // Landing Page & Navigation
+  const [landingPageActive, setLandingPageActive] = useState(true);
+
+  // Profile / Settings Modal State
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [editFullName, setEditFullName] = useState('');
+  const [editUsername, setEditUsername] = useState('');
+  const [editProfilePic, setEditProfilePic] = useState<string | null>(null);
+  const [editCurrentPassword, setEditCurrentPassword] = useState('');
+  const [editNewPassword, setEditNewPassword] = useState('');
+  const [editConfirmPassword, setEditConfirmPassword] = useState('');
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSuccess, setEditSuccess] = useState<string | null>(null);
+
+  // Username Availability Checking
+  const [checkingUsername, setCheckingUsername] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+
   useEffect(() => {
     setIsMounted(true);
     const saved = localStorage.getItem('vibecal_lang');
@@ -140,10 +158,14 @@ export default function Home() {
         setUserId(parsedUser.id);
         fetchEvents(parsedUser.id);
         setupNotifications(parsedUser.id);
+        setLandingPageActive(false);
       } catch (e) {
         console.error('Failed to parse saved user:', e);
         localStorage.removeItem('vibecal_user');
+        setLandingPageActive(true);
       }
+    } else {
+      setLandingPageActive(true);
     }
   }, []);
 
@@ -199,6 +221,7 @@ export default function Home() {
     setUserId(loggedUser.id);
     fetchEvents(loggedUser.id);
     setupNotifications(loggedUser.id);
+    setLandingPageActive(false);
     // Clear forms
     setIdentifier('');
     setPassword('');
@@ -254,6 +277,113 @@ export default function Home() {
     setUserId('');
     setEvents([]);
   };
+
+  // Profile Settings functions
+  const openSettings = () => {
+    if (!user) return;
+    setEditFullName(user.full_name || '');
+    setEditUsername(user.username || '');
+    setEditProfilePic(user.profile_picture || null);
+    setEditCurrentPassword('');
+    setEditNewPassword('');
+    setEditConfirmPassword('');
+    setEditError(null);
+    setEditSuccess(null);
+    setUsernameAvailable(null);
+    setShowSettingsModal(true);
+  };
+
+  const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'image/png' && file.type !== 'image/jpeg') {
+      setEditError('Hanya diperbolehkan mengunggah file PNG atau JPG');
+      return;
+    }
+
+    const maxSize = 1 * 1024 * 1024; // 1MB size limit
+    if (file.size > maxSize) {
+      setEditError('Ukuran gambar terlalu besar. Maksimal ukuran file PNG/JPG adalah 1MB.');
+      return;
+    }
+
+    setEditError(null);
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setEditProfilePic(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditError(null);
+    setEditSuccess(null);
+
+    if (editNewPassword && editNewPassword !== editConfirmPassword) {
+      setEditError('Password baru dan konfirmasi password tidak cocok');
+      return;
+    }
+
+    if (usernameAvailable === false) {
+      setEditError('Username sudah digunakan');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/auth/update-profile`, {
+        userId: user.id,
+        full_name: editFullName,
+        username: editUsername,
+        profile_picture: editProfilePic,
+        current_password: editCurrentPassword,
+        new_password: editNewPassword
+      });
+
+      const { status, user: updatedUser } = response.data;
+      if (status === 'success') {
+        setEditSuccess('Profil berhasil diperbarui!');
+        setUser(updatedUser);
+        localStorage.setItem('vibecal_user', JSON.stringify(updatedUser));
+        setTimeout(() => {
+          setShowSettingsModal(false);
+        }, 1200);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setEditError(err.response?.data?.error || 'Gagal memperbarui profil');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!editUsername || !showSettingsModal || editUsername.toLowerCase().trim() === user?.username) {
+      setUsernameAvailable(null);
+      setCheckingUsername(false);
+      return;
+    }
+    
+    setCheckingUsername(true);
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const response = await axios.post(`${API_BASE_URL}/api/auth/check-username`, {
+          username: editUsername,
+          currentUserId: user?.id
+        });
+        setUsernameAvailable(response.data.available);
+      } catch (err) {
+        console.error('Error checking username:', err);
+      } finally {
+        setCheckingUsername(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [editUsername, showSettingsModal]);
 
   const getGreeting = () => {
     const hour = currentDate.getHours();
@@ -436,9 +566,98 @@ export default function Home() {
     );
   }
 
-  if (!user) {
+  if (!user && landingPageActive) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12 relative overflow-hidden" style={{ fontFamily: "'Fredoka', sans-serif, sans-serif" }}>
+      <div className="min-h-screen flex flex-col bg-background text-[#3D3A6B]" style={{ fontFamily: "'Fredoka', sans-serif" }}>
+        {/* Landing Page Header */}
+        <header className="w-full px-6 py-4 flex justify-between items-center z-50 backdrop-blur-xl bg-surface/90 border-b-2 border-[#3D3A6B]/30 sticky top-0">
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="VibeCal Logo" className="h-10 w-10 object-contain select-none" />
+            <span className="text-xl md:text-2xl font-extrabold select-none">VibeCal</span>
+          </div>
+          <button 
+            onClick={() => {
+              setAuthMode('login');
+              setLandingPageActive(false);
+            }}
+            className="doodle-btn px-5 py-2 font-bold text-sm bg-white hover:bg-[#E8856A]/10 text-[#3D3A6B] cursor-pointer"
+          >
+            Masuk ✦
+          </button>
+        </header>
+
+        {/* Hero Section */}
+        <main className="flex-grow flex flex-col items-center justify-center px-6 py-16 text-center max-w-4xl mx-auto relative z-10">
+          {/* Decorative shapes */}
+          <div className="absolute top-10 left-0 opacity-10 pointer-events-none animate-bounce" style={{ animationDuration: '6s' }}>
+            <span className="material-symbols-outlined text-[#E8856A]" style={{ fontSize: '100px' }}>auto_awesome</span>
+          </div>
+          <div className="absolute bottom-10 right-0 opacity-10 pointer-events-none animate-pulse" style={{ animationDuration: '4s' }}>
+            <span className="material-symbols-outlined text-[#E8856A]" style={{ fontSize: '120px' }}>edit_calendar</span>
+          </div>
+
+          <h1 className="text-4xl md:text-6xl font-extrabold leading-tight mb-6">
+            Atur Jadwal & Vibe-mu dengan <span className="text-[#E8856A]">AI Planner</span> Premium
+          </h1>
+          <p className="text-base md:text-lg opacity-85 mb-8 max-w-2xl mx-auto">
+            VibeCal menggabungkan kalender pintar, analisis mood, dan asisten AI pintar dalam satu antarmuka artistik doodle yang estetik. Cukup ketik rencana Anda secara natural, dan biarkan AI menyusun harinya untuk Anda.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <button 
+              onClick={() => {
+                setAuthMode('register');
+                setLandingPageActive(false);
+              }}
+              className="doodle-btn px-8 py-3.5 font-extrabold text-md bg-[#E8856A] hover:bg-[#E8856A]/90 text-[#3D3A6B] cursor-pointer text-center"
+            >
+              Mulai Kalendarmu - Gratis ✦
+            </button>
+            <button 
+              onClick={() => {
+                setAuthMode('login');
+                setLandingPageActive(false);
+              }}
+              className="doodle-btn px-8 py-3.5 font-extrabold text-md bg-white hover:bg-gray-100 text-[#3D3A6B] cursor-pointer text-center"
+            >
+              Coba Masuk ✦
+            </button>
+          </div>
+
+          {/* Features Bento Section */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16 text-left w-full">
+            <div className="bento-card p-6 bg-white hover:shadow-[6px_6px_0px_#3D3A6B] transition-all">
+              <span className="material-symbols-outlined text-[#E8856A] text-4xl mb-3">auto_awesome</span>
+              <h3 className="font-extrabold text-lg mb-2">Asisten AI Vibe</h3>
+              <p className="text-sm opacity-75">Tulis rencana kegiatan Anda dalam kalimat biasa, AI akan otomatis menjadwalkan ke kalender Anda.</p>
+            </div>
+            <div className="bento-card p-6 bg-white hover:shadow-[6px_6px_0px_#3D3A6B] transition-all">
+              <span className="material-symbols-outlined text-[#7C74C9] text-4xl mb-3">palette</span>
+              <h3 className="font-extrabold text-lg mb-2">Desain Doodle Estetik</h3>
+              <p className="text-sm opacity-75">Tampilan premium bernuansa doodle retro yang memanjakan mata dan membuat produktivitas lebih menyenangkan.</p>
+            </div>
+            <div className="bento-card p-6 bg-white hover:shadow-[6px_6px_0px_#3D3A6B] transition-all">
+              <span className="material-symbols-outlined text-[#5C8A6E] text-4xl mb-3">center_focus_strong</span>
+              <h3 className="font-extrabold text-lg mb-2">Ekstrak Instan</h3>
+              <p className="text-sm opacity-75">Cukup unggah foto roster, jadwal kuliah, atau shift kerja Anda, dan AI akan merangkum semuanya.</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!user && !landingPageActive) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4 py-12 relative overflow-hidden" style={{ fontFamily: "'Fredoka', sans-serif, sans-serif" }}>
+        {/* Back to Home Button */}
+        <button 
+          onClick={() => setLandingPageActive(true)}
+          className="absolute top-6 left-6 doodle-btn px-4 py-2 text-xs font-bold bg-white text-[#3D3A6B] flex items-center gap-1.5 cursor-pointer z-50 animate-in fade-in"
+        >
+          <span className="material-symbols-outlined text-xs">arrow_back</span>
+          Kembali
+        </button>
         {/* Floating background elements for premium aesthetic */}
         <div className="absolute top-10 left-10 opacity-10 pointer-events-none animate-bounce" style={{ animationDuration: '6s' }}>
           <span className="material-symbols-outlined text-[#E8856A]" style={{ fontSize: '100px' }}>auto_awesome</span>
@@ -539,6 +758,18 @@ export default function Home() {
                   className="w-full bg-transparent outline-none text-[#3D3A6B] text-sm"
                 />
               </div>
+              {authMode === 'login' && (
+                <div className="flex justify-end mt-1">
+                  <a 
+                    href="https://wa.me/6285716823315?text=Halo%20Admin%20VibeCal%2C%20saya%20lupa%20password%20dan%20ingin%20meminta%20reset%20password%20akun%20saya." 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-bold text-[#E8856A] hover:underline flex items-center gap-1.5"
+                  >
+                    <span className="material-symbols-outlined text-xs" style={{ fontSize: '14px' }}>chat</span> Lupa Password? Hubungi Admin (WA)
+                  </a>
+                </div>
+              )}
             </div>
 
             <button
@@ -580,11 +811,19 @@ export default function Home() {
           {/* Top row: Logo/Greeting & Actions */}
           <div className="flex justify-between items-center w-full md:w-auto">
             <div className="flex items-center gap-3">
-              <img 
-                src="/logo.png" 
-                alt="VibeCal Logo" 
-                className="h-10 w-10 object-contain select-none" 
-              />
+              {user?.profile_picture ? (
+                <img 
+                  src={user.profile_picture} 
+                  alt="Profile" 
+                  className="h-10 w-10 rounded-full object-cover border-2 border-[#3D3A6B] select-none" 
+                />
+              ) : (
+                <img 
+                  src="/logo.png" 
+                  alt="VibeCal Logo" 
+                  className="h-10 w-10 object-contain select-none" 
+                />
+              )}
               <div className="flex flex-col">
                 <span className="text-xl md:text-2xl font-extrabold text-[#3D3A6B] select-none leading-none" style={{ fontFamily: "'Fredoka', sans-serif" }}>
                   VibeCal
@@ -699,7 +938,11 @@ export default function Home() {
                   {isSyncing ? 'progress_activity' : 'calendar_today'}
                 </span>
               </button>
-              <button className="p-2 hover:bg-[#E8856A]/10 rounded-full transition-colors cursor-pointer active:scale-95">
+              <button 
+                onClick={openSettings}
+                className="p-2 hover:bg-[#E8856A]/10 rounded-full transition-colors cursor-pointer active:scale-95"
+                title="Pengaturan Profil"
+              >
                 <span className="material-symbols-outlined text-[#3D3A6B]">settings</span>
               </button>
               <button
@@ -929,6 +1172,197 @@ export default function Home() {
           <span className="text-label-sm">{t.insights}</span>
         </button>
       </nav>
+      {/* Settings / Profile Management Modal */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 bg-[#3D3A6B]/50 backdrop-blur-md flex items-center justify-center z-[100] p-4 overflow-y-auto" style={{ fontFamily: "'Fredoka', sans-serif" }}>
+          <div className="bento-card max-w-[480px] w-full p-6 bg-white relative animate-in zoom-in-95 duration-200">
+            
+            {/* Modal Header */}
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-extrabold text-[#3D3A6B] flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#E8856A]">manage_accounts</span>
+                Pengaturan Profil
+              </h3>
+              <button 
+                onClick={() => setShowSettingsModal(false)}
+                className="p-1 hover:bg-[#E8856A]/10 rounded-full transition-colors cursor-pointer text-[#3D3A6B] opacity-60 hover:opacity-100 flex items-center justify-center"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
+              </button>
+            </div>
+
+            {editError && (
+              <div className="mb-4 bg-[#DC2626]/10 border-2 border-[#DC2626] rounded-xl px-4 py-2.5 text-xs font-bold text-[#DC2626] flex items-center gap-2 sketch-border-sm">
+                <span className="material-symbols-outlined text-[#DC2626]" style={{ fontSize: '16px' }}>error</span>
+                <span>{editError}</span>
+              </div>
+            )}
+
+            {editSuccess && (
+              <div className="mb-4 bg-[#5C8A6E]/10 border-2 border-[#5C8A6E] rounded-xl px-4 py-2.5 text-xs font-bold text-[#5C8A6E] flex items-center gap-2 sketch-border-sm">
+                <span className="material-symbols-outlined text-[#5C8A6E]" style={{ fontSize: '16px' }}>check_circle</span>
+                <span>{editSuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleUpdateProfile} className="space-y-4">
+              
+              {/* Profile Picture Upload */}
+              <div className="flex flex-col items-center justify-center gap-3 mb-2">
+                <div className="relative">
+                  {editProfilePic ? (
+                    <img 
+                      src={editProfilePic} 
+                      alt="Preview" 
+                      className="h-24 w-24 rounded-full object-cover border-4 border-[#3D3A6B] select-none" 
+                    />
+                  ) : (
+                    <div className="h-24 w-24 rounded-full bg-[#E8856A]/10 border-4 border-dashed border-[#3D3A6B] flex items-center justify-center select-none">
+                      <span className="material-symbols-outlined text-4xl text-[#3D3A6B]">account_circle</span>
+                    </div>
+                  )}
+                  <label 
+                    htmlFor="profile-pic-input"
+                    className="absolute bottom-0 right-0 p-1.5 bg-[#E8856A] text-[#3D3A6B] rounded-full border-2 border-[#3D3A6B] hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center"
+                    title="Ubah Foto Profil"
+                  >
+                    <span className="material-symbols-outlined text-sm" style={{ fontSize: '16px' }}>photo_camera</span>
+                  </label>
+                  <input 
+                    id="profile-pic-input"
+                    type="file" 
+                    accept="image/png, image/jpeg" 
+                    onChange={handleProfilePicChange}
+                    className="hidden" 
+                  />
+                </div>
+                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Maksimal file PNG/JPG: 1MB</span>
+              </div>
+
+              {/* Full Name */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">Nama Lengkap</label>
+                <div className="flex items-center bg-white sketch-border-sm border-[#3D3A6B] px-3 py-2 gap-2 focus-within:ring-2 focus-within:ring-[#E8856A]/50 transition-all">
+                  <span className="material-symbols-outlined text-[#3D3A6B] opacity-60">badge</span>
+                  <input
+                    type="text"
+                    required
+                    value={editFullName}
+                    onChange={e => setEditFullName(e.target.value)}
+                    placeholder="Nama Lengkap"
+                    className="w-full bg-transparent outline-none text-[#3D3A6B] text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Username with Availability Indicator */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">Username</label>
+                  <div className="flex items-center gap-1">
+                    {checkingUsername && (
+                      <span className="text-[10px] text-[#3D3A6B]/60 font-bold flex items-center gap-1">
+                        <span className="material-symbols-outlined text-xs animate-spin" style={{ fontSize: '12px' }}>progress_activity</span>
+                        Memeriksa...
+                      </span>
+                    )}
+                    {!checkingUsername && usernameAvailable === true && (
+                      <span className="text-[10px] text-[#5C8A6E] font-bold flex items-center gap-0.5">
+                        <span className="material-symbols-outlined text-xs text-[#5C8A6E]" style={{ fontSize: '12px' }}>check_circle</span>
+                        Username Tersedia
+                      </span>
+                    )}
+                    {!checkingUsername && usernameAvailable === false && (
+                      <span className="text-[10px] text-[#DC2626] font-bold flex items-center gap-0.5 animate-bounce">
+                        <span className="material-symbols-outlined text-xs text-[#DC2626]" style={{ fontSize: '12px' }}>cancel</span>
+                        Username Sudah Dipakai
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center bg-white sketch-border-sm border-[#3D3A6B] px-3 py-2 gap-2 focus-within:ring-2 focus-within:ring-[#E8856A]/50 transition-all">
+                  <span className="material-symbols-outlined text-[#3D3A6B] opacity-60">alternate_email</span>
+                  <input
+                    type="text"
+                    required
+                    value={editUsername}
+                    onChange={e => setEditUsername(e.target.value)}
+                    placeholder="Username"
+                    className="w-full bg-transparent outline-none text-[#3D3A6B] text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Password Area */}
+              <div className="border-2 border-[#3D3A6B]/20 rounded-xl p-3 bg-gray-50/50 space-y-3">
+                <h4 className="text-xs font-extrabold text-[#3D3A6B] uppercase tracking-wider">Ubah Password (Opsional)</h4>
+                
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold text-[#3D3A6B]/70 uppercase tracking-wider">Password Saat Ini</label>
+                  <div className="flex items-center bg-white sketch-border-sm border-[#3D3A6B] px-2.5 py-1.5 gap-2 focus-within:ring-2 focus-within:ring-[#E8856A]/50 transition-all">
+                    <span className="material-symbols-outlined text-[#3D3A6B] opacity-60 text-sm">lock</span>
+                    <input
+                      type="password"
+                      value={editCurrentPassword}
+                      onChange={e => setEditCurrentPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full bg-transparent outline-none text-[#3D3A6B] text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-[#3D3A6B]/70 uppercase tracking-wider">Password Baru</label>
+                    <div className="flex items-center bg-white sketch-border-sm border-[#3D3A6B] px-2.5 py-1.5 gap-2 focus-within:ring-2 focus-within:ring-[#E8856A]/50 transition-all">
+                      <span className="material-symbols-outlined text-[#3D3A6B] opacity-60 text-sm">lock_reset</span>
+                      <input
+                        type="password"
+                        value={editNewPassword}
+                        onChange={e => setEditNewPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full bg-transparent outline-none text-[#3D3A6B] text-xs"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-[#3D3A6B]/70 uppercase tracking-wider">Konfirmasi Password</label>
+                    <div className="flex items-center bg-white sketch-border-sm border-[#3D3A6B] px-2.5 py-1.5 gap-2 focus-within:ring-2 focus-within:ring-[#E8856A]/50 transition-all">
+                      <span className="material-symbols-outlined text-[#3D3A6B] opacity-60 text-sm">enhanced_encryption</span>
+                      <input
+                        type="password"
+                        value={editConfirmPassword}
+                        onChange={e => setEditConfirmPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full bg-transparent outline-none text-[#3D3A6B] text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSettingsModal(false)}
+                  className="flex-1 doodle-btn bg-white hover:bg-gray-100 text-[#3D3A6B] py-2 rounded-xl font-bold transition-all cursor-pointer text-center text-sm"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoading || usernameAvailable === false}
+                  className="flex-1 doodle-btn bg-[#E8856A] hover:bg-[#E8856A]/90 text-[#3D3A6B] py-2 rounded-xl font-extrabold transition-all cursor-pointer text-center text-sm disabled:opacity-50"
+                >
+                  Simpan ✦
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

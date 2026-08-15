@@ -53,7 +53,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       status: 'success',
-      user: newUser,
+      user: {
+        ...newUser,
+        profile_picture: null
+      },
     }, { status: 201 });
 
   } catch (error: any) {
