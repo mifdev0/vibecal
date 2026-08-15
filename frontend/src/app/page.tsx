@@ -153,6 +153,13 @@ export default function Home() {
   const [forumError, setForumError] = useState<string | null>(null);
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
 
+  // Editing feedback post state
+  const [editingFeedbackId, setEditingFeedbackId] = useState<string | null>(null);
+  const [editFeedbackTitle, setEditFeedbackTitle] = useState('');
+  const [editFeedbackDesc, setEditFeedbackDesc] = useState('');
+  const [editFeedbackCategory, setEditFeedbackCategory] = useState('Masukan');
+  const [editFeedbackImage, setEditFeedbackImage] = useState<string | null>(null);
+
   useEffect(() => {
     setIsMounted(true);
     const saved = localStorage.getItem('vibecal_lang');
@@ -486,6 +493,92 @@ export default function Home() {
       }
     } catch (err) {
       console.error('Error adding comment:', err);
+    }
+  };
+
+  const handleDeleteFeedback = async (feedbackId: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus masukan ini?')) return;
+
+    try {
+      const response = await axios.delete(`${API_BASE_URL}/api/feedback?feedbackId=${feedbackId}&userId=${userId}`);
+      if (response.data.status === 'success') {
+        setFeedbacks(feedbacks.filter(f => f.id !== feedbackId));
+      }
+    } catch (err: any) {
+      console.error('Error deleting feedback:', err);
+      alert(err.response?.data?.error || 'Gagal menghapus masukan');
+    }
+  };
+
+  const handleStartEditFeedback = (fb: any) => {
+    setEditingFeedbackId(fb.id);
+    setEditFeedbackTitle(fb.title);
+    setEditFeedbackDesc(fb.description);
+    setEditFeedbackCategory(fb.category);
+    setEditFeedbackImage(fb.image_url);
+    setForumError(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingFeedbackId(null);
+    setEditFeedbackTitle('');
+    setEditFeedbackDesc('');
+    setEditFeedbackImage(null);
+    setForumError(null);
+  };
+
+  const handleEditFeedbackImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'image/png' && file.type !== 'image/jpeg') {
+      setForumError('Hanya diperbolehkan melampirkan file PNG atau JPG');
+      return;
+    }
+
+    const maxSize = 1 * 1024 * 1024; // 1MB
+    if (file.size > maxSize) {
+      setForumError('Ukuran gambar maksimal adalah 1MB.');
+      return;
+    }
+
+    setForumError(null);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setEditFeedbackImage(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveEditFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForumError(null);
+
+    if (!editFeedbackTitle.trim() || !editFeedbackDesc.trim()) {
+      setForumError('Judul dan Deskripsi wajib diisi');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await axios.put(`${API_BASE_URL}/api/feedback`, {
+        feedbackId: editingFeedbackId,
+        userId,
+        title: editFeedbackTitle,
+        description: editFeedbackDesc,
+        category: editFeedbackCategory,
+        image_url: editFeedbackImage
+      });
+
+      if (response.data.status === 'success') {
+        setFeedbacks(feedbacks.map(f => f.id === editingFeedbackId ? response.data.feedback : f));
+        handleCancelEdit();
+      }
+    } catch (err: any) {
+      console.error(err);
+      setForumError(err.response?.data?.error || 'Gagal mengedit masukan');
+    } finally {
+      setIsLoading(false);
     }
   };
   const getGreeting = () => {
@@ -1243,129 +1336,265 @@ export default function Home() {
             {/* Left Side: Submit Feedback Form */}
             <div className="lg:col-span-1">
               <div className="bento-card p-6 bg-white sticky top-24">
-                <h3 className="text-xl font-extrabold text-[#3D3A6B] mb-4 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#E8856A]">rate_review</span>
-                  Kirim Masukan / Bug
-                </h3>
-                
-                {forumError && (
-                  <div className="mb-4 bg-[#DC2626]/10 border-2 border-[#DC2626] rounded-xl px-4 py-2 text-xs font-bold text-[#DC2626] flex items-center gap-2 sketch-border-sm">
-                    <span className="material-symbols-outlined text-xs">error</span>
-                    <span>{forumError}</span>
-                  </div>
-                )}
-
-                <form onSubmit={handleSubmitFeedback} className="space-y-4">
-                  {/* Category Selector */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">Kategori</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { name: 'Bug', color: '#DC2626', icon: 'bug_report' },
-                        { name: 'Masukan', color: '#5C8A6E', icon: 'lightbulb' },
-                        { name: 'Tanya', color: '#7C74C9', icon: 'help' }
-                      ].map(cat => (
-                        <button
-                          key={cat.name}
-                          type="button"
-                          onClick={() => setFeedbackCategory(cat.name)}
-                          className={`doodle-btn px-2 py-1.5 flex flex-col items-center justify-center gap-1 text-xs font-bold transition-all ${
-                            feedbackCategory === cat.name 
-                              ? 'bg-[#E8856A] text-[#3D3A6B]' 
-                              : 'bg-white hover:bg-gray-100 text-[#3D3A6B]'
-                          }`}
-                        >
-                          <span className="material-symbols-outlined text-sm" style={{ color: feedbackCategory === cat.name ? '#3D3A6B' : cat.color }}>
-                            {cat.icon}
-                          </span>
-                          {cat.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Title */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">Judul</label>
-                    <div className="flex items-center bg-white sketch-border-sm border-[#3D3A6B] px-3 py-2 gap-2 focus-within:ring-2 focus-within:ring-[#E8856A]/50 transition-all">
-                      <input
-                        type="text"
-                        required
-                        value={feedbackTitle}
-                        onChange={e => setFeedbackTitle(e.target.value)}
-                        placeholder="Misal: Kalender eror di HP"
-                        className="w-full bg-transparent outline-none text-[#3D3A6B] text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Description */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">Detail Laporan / Ide</label>
-                    <div className="bg-white sketch-border-sm border-[#3D3A6B] px-3 py-2 focus-within:ring-2 focus-within:ring-[#E8856A]/50 transition-all">
-                      <textarea
-                        required
-                        rows={4}
-                        value={feedbackDesc}
-                        onChange={e => setFeedbackDesc(e.target.value)}
-                        placeholder="Jelaskan detail bug atau ide fitur baru Anda..."
-                        className="w-full bg-transparent outline-none text-[#3D3A6B] text-sm resize-none"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Image Attachment */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">Foto Pendukung (Opsional)</label>
-                    <div className="flex items-center gap-3">
-                      <label 
-                        htmlFor="feedback-file"
-                        className="doodle-btn px-4 py-2 text-xs font-bold bg-white hover:bg-gray-50 text-[#3D3A6B] cursor-pointer flex items-center gap-1.5 active:scale-95"
-                      >
-                        <span className="material-symbols-outlined text-sm">attach_file</span>
-                        Unggah Foto
-                      </label>
-                      <input
-                        id="feedback-file"
-                        type="file"
-                        accept="image/png, image/jpeg"
-                        onChange={handleFeedbackImageChange}
-                        className="hidden"
-                      />
-                      <span className="text-[10px] text-gray-500 font-bold uppercase select-none">Maks: 1MB (PNG/JPG)</span>
-                    </div>
+                {editingFeedbackId ? (
+                  <>
+                    <h3 className="text-xl font-extrabold text-[#3D3A6B] mb-4 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[#E8856A]">edit</span>
+                      Edit Masukan
+                    </h3>
                     
-                    {feedbackImage && (
-                      <div className="mt-2 relative inline-block">
-                        <img 
-                          src={feedbackImage} 
-                          alt="Attachment Preview" 
-                          className="h-20 w-auto rounded-lg border-2 border-[#3D3A6B] object-cover" 
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFeedbackImage(null);
-                            const fileInput = document.getElementById('feedback-file') as HTMLInputElement;
-                            if (fileInput) fileInput.value = '';
-                          }}
-                          className="absolute -top-1.5 -right-1.5 bg-[#DC2626] text-white rounded-full p-0.5 border border-[#3D3A6B] hover:scale-105 active:scale-95"
-                        >
-                          <span className="material-symbols-outlined text-xs flex items-center justify-center" style={{ fontSize: '10px' }}>close</span>
-                        </button>
+                    {forumError && (
+                      <div className="mb-4 bg-[#DC2626]/10 border-2 border-[#DC2626] rounded-xl px-4 py-2 text-xs font-bold text-[#DC2626] flex items-center gap-2 sketch-border-sm">
+                        <span className="material-symbols-outlined text-xs">error</span>
+                        <span>{forumError}</span>
                       </div>
                     )}
-                  </div>
 
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="doodle-btn bg-[#E8856A] text-[#3D3A6B] w-full py-2.5 rounded-xl font-extrabold transition-all cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    {isLoading && <span className="material-symbols-outlined animate-spin" style={{ fontSize: '18px' }}>progress_activity</span>}
-                    Kirim ✦
-                  </button>
-                </form>
+                    <form onSubmit={handleSaveEditFeedback} className="space-y-4">
+                      {/* Category Selector */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">Kategori</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { name: 'Bug', color: '#DC2626', icon: 'bug_report' },
+                            { name: 'Masukan', color: '#5C8A6E', icon: 'lightbulb' },
+                            { name: 'Tanya', color: '#7C74C9', icon: 'help' }
+                          ].map(cat => (
+                            <button
+                              key={cat.name}
+                              type="button"
+                              onClick={() => setEditFeedbackCategory(cat.name)}
+                              className={`doodle-btn px-2 py-1.5 flex flex-col items-center justify-center gap-1 text-xs font-bold transition-all ${
+                                editFeedbackCategory === cat.name 
+                                  ? 'bg-[#E8856A] text-[#3D3A6B]' 
+                                  : 'bg-white hover:bg-gray-100 text-[#3D3A6B]'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-sm" style={{ color: editFeedbackCategory === cat.name ? '#3D3A6B' : cat.color }}>
+                                {cat.icon}
+                              </span>
+                              {cat.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Title */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">Judul</label>
+                        <div className="flex items-center bg-white sketch-border-sm border-[#3D3A6B] px-3 py-2 gap-2 focus-within:ring-2 focus-within:ring-[#E8856A]/50 transition-all">
+                          <input
+                            type="text"
+                            required
+                            value={editFeedbackTitle}
+                            onChange={e => setEditFeedbackTitle(e.target.value)}
+                            placeholder="Misal: Kalender eror di HP"
+                            className="w-full bg-transparent outline-none text-[#3D3A6B] text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">Detail Laporan / Ide</label>
+                        <div className="bg-white sketch-border-sm border-[#3D3A6B] px-3 py-2 focus-within:ring-2 focus-within:ring-[#E8856A]/50 transition-all">
+                          <textarea
+                            required
+                            rows={4}
+                            value={editFeedbackDesc}
+                            onChange={e => setEditFeedbackDesc(e.target.value)}
+                            placeholder="Jelaskan detail bug atau ide..."
+                            className="w-full bg-transparent outline-none text-[#3D3A6B] text-sm resize-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Image Attachment */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">Foto Pendukung (Opsional)</label>
+                        <div className="flex items-center gap-3">
+                          <label 
+                            htmlFor="edit-feedback-file"
+                            className="doodle-btn px-4 py-2 text-xs font-bold bg-white hover:bg-gray-50 text-[#3D3A6B] cursor-pointer flex items-center gap-1.5 active:scale-95"
+                          >
+                            <span className="material-symbols-outlined text-sm">attach_file</span>
+                            Unggah Foto
+                          </label>
+                          <input
+                            id="edit-feedback-file"
+                            type="file"
+                            accept="image/png, image/jpeg"
+                            onChange={handleEditFeedbackImageChange}
+                            className="hidden"
+                          />
+                          <span className="text-[10px] text-gray-500 font-bold uppercase select-none">Maks: 1MB</span>
+                        </div>
+                        
+                        {editFeedbackImage && (
+                          <div className="mt-2 relative inline-block">
+                            <img 
+                              src={editFeedbackImage} 
+                              alt="Attachment Preview" 
+                              className="h-20 w-auto rounded-lg border-2 border-[#3D3A6B] object-cover" 
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setEditFeedbackImage(null)}
+                              className="absolute -top-1.5 -right-1.5 bg-[#DC2626] text-white rounded-full p-0.5 border border-[#3D3A6B] hover:scale-105 active:scale-95 flex items-center justify-center"
+                              style={{ width: '18px', height: '18px' }}
+                            >
+                              <span className="material-symbols-outlined text-[10px]">close</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleCancelEdit}
+                          className="flex-1 doodle-btn bg-white hover:bg-gray-100 text-[#3D3A6B] py-2 rounded-xl font-bold transition-all cursor-pointer text-center text-sm"
+                        >
+                          Batal
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={isLoading}
+                          className="flex-1 doodle-btn bg-[#E8856A] text-[#3D3A6B] py-2 rounded-xl font-extrabold transition-all cursor-pointer text-center text-sm"
+                        >
+                          Simpan ✦
+                        </button>
+                      </div>
+                    </form>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-xl font-extrabold text-[#3D3A6B] mb-4 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[#E8856A]">rate_review</span>
+                      Kirim Masukan / Bug
+                    </h3>
+                    
+                    {forumError && (
+                      <div className="mb-4 bg-[#DC2626]/10 border-2 border-[#DC2626] rounded-xl px-4 py-2 text-xs font-bold text-[#DC2626] flex items-center gap-2 sketch-border-sm">
+                        <span className="material-symbols-outlined text-xs">error</span>
+                        <span>{forumError}</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleSubmitFeedback} className="space-y-4">
+                      {/* Category Selector */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">Kategori</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { name: 'Bug', color: '#DC2626', icon: 'bug_report' },
+                            { name: 'Masukan', color: '#5C8A6E', icon: 'lightbulb' },
+                            { name: 'Tanya', color: '#7C74C9', icon: 'help' }
+                          ].map(cat => (
+                            <button
+                              key={cat.name}
+                              type="button"
+                              onClick={() => setFeedbackCategory(cat.name)}
+                              className={`doodle-btn px-2 py-1.5 flex flex-col items-center justify-center gap-1 text-xs font-bold transition-all ${
+                                feedbackCategory === cat.name 
+                                  ? 'bg-[#E8856A] text-[#3D3A6B]' 
+                                  : 'bg-white hover:bg-gray-100 text-[#3D3A6B]'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-sm" style={{ color: feedbackCategory === cat.name ? '#3D3A6B' : cat.color }}>
+                                {cat.icon}
+                              </span>
+                              {cat.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Title */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">Judul</label>
+                        <div className="flex items-center bg-white sketch-border-sm border-[#3D3A6B] px-3 py-2 gap-2 focus-within:ring-2 focus-within:ring-[#E8856A]/50 transition-all">
+                          <input
+                            type="text"
+                            required
+                            value={feedbackTitle}
+                            onChange={e => setFeedbackTitle(e.target.value)}
+                            placeholder="Misal: Kalender eror di HP"
+                            className="w-full bg-transparent outline-none text-[#3D3A6B] text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">Detail Laporan / Ide</label>
+                        <div className="bg-white sketch-border-sm border-[#3D3A6B] px-3 py-2 focus-within:ring-2 focus-within:ring-[#E8856A]/50 transition-all">
+                          <textarea
+                            required
+                            rows={4}
+                            value={feedbackDesc}
+                            onChange={e => setFeedbackDesc(e.target.value)}
+                            placeholder="Jelaskan detail bug atau ide fitur baru Anda..."
+                            className="w-full bg-transparent outline-none text-[#3D3A6B] text-sm resize-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Image Attachment */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">Foto Pendukung (Opsional)</label>
+                        <div className="flex items-center gap-3">
+                          <label 
+                            htmlFor="feedback-file"
+                            className="doodle-btn px-4 py-2 text-xs font-bold bg-white hover:bg-gray-50 text-[#3D3A6B] cursor-pointer flex items-center gap-1.5 active:scale-95"
+                          >
+                            <span className="material-symbols-outlined text-sm">attach_file</span>
+                            Unggah Foto
+                          </label>
+                          <input
+                            id="feedback-file"
+                            type="file"
+                            accept="image/png, image/jpeg"
+                            onChange={handleFeedbackImageChange}
+                            className="hidden"
+                          />
+                          <span className="text-[10px] text-gray-500 font-bold uppercase select-none">Maks: 1MB (PNG/JPG)</span>
+                        </div>
+                        
+                        {feedbackImage && (
+                          <div className="mt-2 relative inline-block">
+                            <img 
+                              src={feedbackImage} 
+                              alt="Attachment Preview" 
+                              className="h-20 w-auto rounded-lg border-2 border-[#3D3A6B] object-cover" 
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFeedbackImage(null);
+                                const fileInput = document.getElementById('feedback-file') as HTMLInputElement;
+                                if (fileInput) fileInput.value = '';
+                              }}
+                              className="absolute -top-1.5 -right-1.5 bg-[#DC2626] text-white rounded-full p-0.5 border border-[#3D3A6B] hover:scale-105 active:scale-95 flex items-center justify-center"
+                              style={{ width: '18px', height: '18px' }}
+                            >
+                              <span className="material-symbols-outlined text-[10px]">close</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="doodle-btn bg-[#E8856A] text-[#3D3A6B] w-full py-2.5 rounded-xl font-extrabold transition-all cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        {isLoading && <span className="material-symbols-outlined animate-spin" style={{ fontSize: '18px' }}>progress_activity</span>}
+                        Kirim ✦
+                      </button>
+                    </form>
+                  </>
+                )}
               </div>
             </div>
 
@@ -1426,14 +1655,37 @@ export default function Home() {
                           </div>
                         </div>
 
-                        {/* Category Badge */}
-                        <span 
-                          className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-md flex items-center gap-1 border"
-                          style={{ backgroundColor: currentBadge.bg, color: currentBadge.text, borderColor: `${currentBadge.text}30` }}
-                        >
-                          <span className="material-symbols-outlined text-xs">{currentBadge.icon}</span>
-                          {fb.category}
-                        </span>
+                         {/* Category Badge & Actions */}
+                        <div className="flex items-center gap-2">
+                          <span 
+                            className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-md flex items-center gap-1 border"
+                            style={{ backgroundColor: currentBadge.bg, color: currentBadge.text, borderColor: `${currentBadge.text}30` }}
+                          >
+                            <span className="material-symbols-outlined text-xs">{currentBadge.icon}</span>
+                            {fb.category}
+                          </span>
+                          
+                          {(fb.user_id === userId || user?.email?.toLowerCase() === 'mifthahulamri@gmail.com') && (
+                            <div className="flex items-center gap-1 bg-gray-100 p-0.5 rounded-lg border border-[#3D3A6B]/15">
+                              {fb.user_id === userId && (
+                                <button
+                                  onClick={() => handleStartEditFeedback(fb)}
+                                  className="p-1 hover:bg-[#E8856A]/15 rounded-md transition-colors cursor-pointer text-[#3D3A6B] hover:text-[#E8856A]"
+                                  title="Edit Masukan"
+                                >
+                                  <span className="material-symbols-outlined text-xs" style={{ fontSize: '14px' }}>edit</span>
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDeleteFeedback(fb.id)}
+                                className="p-1 hover:bg-[#DC2626]/15 rounded-md transition-colors cursor-pointer text-[#DC2626]"
+                                title="Hapus Masukan"
+                              >
+                                <span className="material-symbols-outlined text-xs" style={{ fontSize: '14px' }}>delete</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Post Content */}
