@@ -97,52 +97,8 @@ const monthsEN = ['January','February','March','April','May','June','July','Augu
 const monthsID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
 const setupNotifications = async (uId: string) => {
-  if (typeof window === 'undefined') return;
-  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
-    console.log('Push notifications are not supported in this browser.');
-    return;
-  }
-
-  try {
-    const registration = await navigator.serviceWorker.register('/sw.js');
-    await navigator.serviceWorker.ready;
-
-    let permission = Notification.permission;
-    if (permission === 'default') {
-      permission = await Notification.requestPermission();
-    }
-    
-    if (permission !== 'granted') {
-      console.log('Notification permission denied');
-      return;
-    }
-
-    const publicVapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-    if (!publicVapidKey) {
-      console.warn('VAPID public key is missing from env');
-      return;
-    }
-
-    // Check if we already have an active subscription
-    let subscription = await registration.pushManager.getSubscription();
-    
-    if (!subscription) {
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
-      });
-    }
-
-    // Save subscription in database
-    await axios.post(`${API_BASE_URL}/api/notifications/subscribe`, {
-      userId: uId,
-      subscription: subscription
-    });
-
-    console.log('Push subscription setup complete');
-  } catch (err) {
-    console.error('Error during push notification setup:', err);
-  }
+  // Push notifications disabled
+  return;
 };
 
 export default function Home() {

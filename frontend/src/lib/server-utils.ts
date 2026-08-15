@@ -4,8 +4,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import crypto from 'crypto';
 
 // Initialize Supabase Client
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_KEY || '';
+const supabaseUrl = process.env.SUPABASE_URL || 'https://placeholder-url.supabase.co';
+const supabaseKey = process.env.SUPABASE_KEY || 'placeholder-key';
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Initialize Groq Client
@@ -57,19 +57,11 @@ VALIDATION & CONVERSATION RULES (VERY IMPORTANT FOR EFFICIENCY):
    - CRITICAL: JANGAN PERNAH menanyakan kembali detail (nama kegiatan, tanggal, jam) yang sudah pernah disebutkan oleh pengguna di pesan-pesan sebelumnya dalam riwayat obrolan (chatHistory).
    - Bacalah seluruh riwayat pesan sebelumnya dengan sangat teliti untuk merangkai detail. Jika user menjawab pertanyaan klarifikasi (misalnya user menjawab "Jam 4 sore"), hubungkan jawaban ini dengan kegiatan ("Gym") dan tanggal ("besok") dari pesan pertama mereka di riwayat obrolan. JANGAN tanyakan lagi "kegiatan apa"!
    - Keep "actions.add", "actions.update", and "actions.delete" as empty arrays.
-2. If the user's request is complete and has all necessary fields to add an event:
+2. If the user's request is complete and has all necessary fields:
    - Set "status" to "success".
-   - Set "message" to "Jadwal berhasil ditambahkan! Apakah agenda ini mau diingatkan? Jika ya, kapan saja?" (if language is Indonesian) or "Schedule successfully added! Would you like a reminder for this event? If yes, when?" (if language is English).
+   - Set "message" to "Jadwal berhasil ditambahkan!" (if language is Indonesian) or "Schedule successfully added!" (if language is English).
    - Populate "actions" according to the ACTION MAPPING GUIDELINES.
-3. If the user is responding to the reminder question for a recently added event (e.g., saying "Iya, 20 menit sebelum", "tidak usah", etc.):
-   - Set "status" to "success".
-   - Set "message" to "Pengingat berhasil diatur!" (if language is Indonesian) or "Reminder successfully set!" (if language is English).
-   - Match the event mentioned in chatHistory with the event in the existing calendar list by its title and start time.
-   - You MUST include a single update action in "actions.update":
-     * "id": the exact "id" of the matched event from the calendar list.
-     * "reminder_offset": the positive integer of minutes (e.g. 20). Set to -1 if they want to turn off/disable notifications ("tidak usah").
-   - CRITICAL: Do NOT add a new event in "actions.add". Keep "actions.add" and "actions.delete" as empty arrays!
-4. If the user's message is OUT OF CONTEXT / completely unrelated to calendar scheduling (e.g., friendly greetings like 'halo', 'apa kabar', casual chatting like 'lagi apa', jokes, or general talk):
+3. If the user's message is OUT OF CONTEXT / completely unrelated to calendar scheduling (e.g., friendly greetings like 'halo', 'apa kabar', casual chatting like 'lagi apa', jokes, or general talk):
    - Set "status" to "success".
    - In the "message" field, respond in a friendly, very short conversational way, and politely guide them back to scheduling (e.g., "Halo! Ada rencana atau jadwal yang ingin kamu tambahkan hari ini?").
    - Do NOT ask clarification questions. Do NOT set status to "needs_clarification". Avoid getting stuck in a loop.
