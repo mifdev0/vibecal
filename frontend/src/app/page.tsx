@@ -143,6 +143,16 @@ export default function Home() {
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
 
+  // Feedback Forum States
+  const [currentTab, setCurrentTab] = useState<'calendar' | 'forum'>('calendar');
+  const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const [feedbackTitle, setFeedbackTitle] = useState('');
+  const [feedbackDesc, setFeedbackDesc] = useState('');
+  const [feedbackCategory, setFeedbackCategory] = useState('Masukan');
+  const [feedbackImage, setFeedbackImage] = useState<string | null>(null);
+  const [forumError, setForumError] = useState<string | null>(null);
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+
   useEffect(() => {
     setIsMounted(true);
     const saved = localStorage.getItem('vibecal_lang');
@@ -384,7 +394,100 @@ export default function Home() {
 
     return () => clearTimeout(delayDebounceFn);
   }, [editUsername, showSettingsModal]);
+  // Forum Logic & Functions
+  const fetchFeedbacks = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/feedback`);
+      setFeedbacks(res.data);
+    } catch (err) {
+      console.error('Error fetching feedbacks:', err);
+    }
+  };
 
+  useEffect(() => {
+    if (currentTab === 'forum') {
+      fetchFeedbacks();
+    }
+  }, [currentTab]);
+
+  const handleFeedbackImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'image/png' && file.type !== 'image/jpeg') {
+      setForumError('Hanya diperbolehkan melampirkan file PNG atau JPG');
+      return;
+    }
+
+    const maxSize = 1 * 1024 * 1024; // 1MB
+    if (file.size > maxSize) {
+      setForumError('Ukuran gambar maksimal adalah 1MB.');
+      return;
+    }
+
+    setForumError(null);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFeedbackImage(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmitFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForumError(null);
+
+    if (!feedbackTitle.trim() || !feedbackDesc.trim()) {
+      setForumError('Judul dan Deskripsi wajib diisi');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/feedback`, {
+        userId,
+        title: feedbackTitle,
+        description: feedbackDesc,
+        category: feedbackCategory,
+        image_url: feedbackImage
+      });
+
+      if (response.data.status === 'success') {
+        setFeedbacks([response.data.feedback, ...feedbacks]);
+        setFeedbackTitle('');
+        setFeedbackDesc('');
+        setFeedbackImage(null);
+        const fileInput = document.getElementById('feedback-file') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
+      }
+    } catch (err: any) {
+      console.error(err);
+      setForumError(err.response?.data?.error || 'Gagal mengirim masukan');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddComment = async (e: React.FormEvent, feedbackId: string) => {
+    e.preventDefault();
+    const commentText = commentInputs[feedbackId];
+    if (!commentText || !commentText.trim()) return;
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/feedback/comment`, {
+        feedbackId,
+        userId,
+        content: commentText.trim()
+      });
+
+      if (response.data.status === 'success') {
+        setFeedbacks(feedbacks.map(f => f.id === feedbackId ? response.data.feedback : f));
+        setCommentInputs({ ...commentInputs, [feedbackId]: '' });
+      }
+    } catch (err) {
+      console.error('Error adding comment:', err);
+    }
+  };
   const getGreeting = () => {
     const hour = currentDate.getHours();
     if (hour >= 5 && hour < 12) return lang === 'id' ? 'Selamat Pagi' : 'Good Morning';
@@ -939,8 +1042,15 @@ export default function Home() {
                 </span>
               </button>
               <button 
+                onClick={() => setCurrentTab(currentTab === 'calendar' ? 'forum' : 'calendar')}
+                className={`p-2 rounded-full transition-colors cursor-pointer active:scale-95 flex items-center justify-center ${currentTab === 'forum' ? 'bg-[#E8856A] text-[#3D3A6B]' : 'hover:bg-[#E8856A]/10 text-[#3D3A6B]'}`}
+                title={currentTab === 'calendar' ? 'Buka Forum Masukan' : 'Buka Kalender'}
+              >
+                <span className="material-symbols-outlined">{currentTab === 'calendar' ? 'forum' : 'calendar_today'}</span>
+              </button>
+              <button 
                 onClick={openSettings}
-                className="p-2 hover:bg-[#E8856A]/10 rounded-full transition-colors cursor-pointer active:scale-95"
+                className="p-2 hover:bg-[#E8856A]/10 rounded-full transition-colors cursor-pointer active:scale-95 flex items-center justify-center"
                 title="Pengaturan Profil"
               >
                 <span className="material-symbols-outlined text-[#3D3A6B]">settings</span>
@@ -969,7 +1079,9 @@ export default function Home() {
           </div>
         )}
 
-        {/* Bento Grid Calendar View */}
+        {currentTab === 'calendar' ? (
+          <>
+            {/* Bento Grid Calendar View */}
         <div id="calendar-container">
           <Calendar 
             events={events} 
@@ -1123,6 +1235,292 @@ export default function Home() {
             </div>
           </div>
         </div>
+      </>
+    ) : (
+          /* Feedback Forum Page layout */
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-bento-gap animate-in fade-in duration-300">
+            
+            {/* Left Side: Submit Feedback Form */}
+            <div className="lg:col-span-1">
+              <div className="bento-card p-6 bg-white sticky top-24">
+                <h3 className="text-xl font-extrabold text-[#3D3A6B] mb-4 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#E8856A]">rate_review</span>
+                  Kirim Masukan / Bug
+                </h3>
+                
+                {forumError && (
+                  <div className="mb-4 bg-[#DC2626]/10 border-2 border-[#DC2626] rounded-xl px-4 py-2 text-xs font-bold text-[#DC2626] flex items-center gap-2 sketch-border-sm">
+                    <span className="material-symbols-outlined text-xs">error</span>
+                    <span>{forumError}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleSubmitFeedback} className="space-y-4">
+                  {/* Category Selector */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">Kategori</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { name: 'Bug', color: '#DC2626', icon: 'bug_report' },
+                        { name: 'Masukan', color: '#5C8A6E', icon: 'lightbulb' },
+                        { name: 'Tanya', color: '#7C74C9', icon: 'help' }
+                      ].map(cat => (
+                        <button
+                          key={cat.name}
+                          type="button"
+                          onClick={() => setFeedbackCategory(cat.name)}
+                          className={`doodle-btn px-2 py-1.5 flex flex-col items-center justify-center gap-1 text-xs font-bold transition-all ${
+                            feedbackCategory === cat.name 
+                              ? 'bg-[#E8856A] text-[#3D3A6B]' 
+                              : 'bg-white hover:bg-gray-100 text-[#3D3A6B]'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-sm" style={{ color: feedbackCategory === cat.name ? '#3D3A6B' : cat.color }}>
+                            {cat.icon}
+                          </span>
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Title */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">Judul</label>
+                    <div className="flex items-center bg-white sketch-border-sm border-[#3D3A6B] px-3 py-2 gap-2 focus-within:ring-2 focus-within:ring-[#E8856A]/50 transition-all">
+                      <input
+                        type="text"
+                        required
+                        value={feedbackTitle}
+                        onChange={e => setFeedbackTitle(e.target.value)}
+                        placeholder="Misal: Kalender eror di HP"
+                        className="w-full bg-transparent outline-none text-[#3D3A6B] text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">Detail Laporan / Ide</label>
+                    <div className="bg-white sketch-border-sm border-[#3D3A6B] px-3 py-2 focus-within:ring-2 focus-within:ring-[#E8856A]/50 transition-all">
+                      <textarea
+                        required
+                        rows={4}
+                        value={feedbackDesc}
+                        onChange={e => setFeedbackDesc(e.target.value)}
+                        placeholder="Jelaskan detail bug atau ide fitur baru Anda..."
+                        className="w-full bg-transparent outline-none text-[#3D3A6B] text-sm resize-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Image Attachment */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">Foto Pendukung (Opsional)</label>
+                    <div className="flex items-center gap-3">
+                      <label 
+                        htmlFor="feedback-file"
+                        className="doodle-btn px-4 py-2 text-xs font-bold bg-white hover:bg-gray-50 text-[#3D3A6B] cursor-pointer flex items-center gap-1.5 active:scale-95"
+                      >
+                        <span className="material-symbols-outlined text-sm">attach_file</span>
+                        Unggah Foto
+                      </label>
+                      <input
+                        id="feedback-file"
+                        type="file"
+                        accept="image/png, image/jpeg"
+                        onChange={handleFeedbackImageChange}
+                        className="hidden"
+                      />
+                      <span className="text-[10px] text-gray-500 font-bold uppercase select-none">Maks: 1MB (PNG/JPG)</span>
+                    </div>
+                    
+                    {feedbackImage && (
+                      <div className="mt-2 relative inline-block">
+                        <img 
+                          src={feedbackImage} 
+                          alt="Attachment Preview" 
+                          className="h-20 w-auto rounded-lg border-2 border-[#3D3A6B] object-cover" 
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFeedbackImage(null);
+                            const fileInput = document.getElementById('feedback-file') as HTMLInputElement;
+                            if (fileInput) fileInput.value = '';
+                          }}
+                          className="absolute -top-1.5 -right-1.5 bg-[#DC2626] text-white rounded-full p-0.5 border border-[#3D3A6B] hover:scale-105 active:scale-95"
+                        >
+                          <span className="material-symbols-outlined text-xs flex items-center justify-center" style={{ fontSize: '10px' }}>close</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="doodle-btn bg-[#E8856A] text-[#3D3A6B] w-full py-2.5 rounded-xl font-extrabold transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    {isLoading && <span className="material-symbols-outlined animate-spin" style={{ fontSize: '18px' }}>progress_activity</span>}
+                    Kirim ✦
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            {/* Right Side: Feed of Feedbacks */}
+            <div className="lg:col-span-2 space-y-6">
+              {feedbacks.length === 0 ? (
+                <div className="bento-card p-12 bg-white text-center flex flex-col items-center justify-center">
+                  <span className="material-symbols-outlined text-[#3D3A6B]/30 text-5xl mb-3">forum</span>
+                  <p className="font-bold text-[#3D3A6B]/75 text-md">Belum ada masukan di forum ini. Jadilah yang pertama!</p>
+                </div>
+              ) : (
+                feedbacks.map((fb) => {
+                  const author = fb.author || {};
+                  const isAuthorDev = author.email?.toLowerCase() === 'mifthahulamri@gmail.com';
+                  const dateStr = new Date(fb.created_at).toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-US', {
+                    day: 'numeric',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  });
+
+                  // Category badges
+                  const catBadges: Record<string, { bg: string, text: string, icon: string }> = {
+                    'Bug': { bg: '#DC262615', text: '#DC2626', icon: 'bug_report' },
+                    'Masukan': { bg: '#5C8A6E15', text: '#5C8A6E', icon: 'lightbulb' },
+                    'Tanya': { bg: '#7C74C915', text: '#7C74C9', icon: 'help' }
+                  };
+                  const currentBadge = catBadges[fb.category] || { bg: '#E8856A15', text: '#E8856A', icon: 'chat' };
+
+                  return (
+                    <div key={fb.id} className="bento-card p-5 sm:p-6 bg-white space-y-4">
+                      
+                      {/* Post Header: Profile & Category */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#3D3A6B]/10 pb-3">
+                        <div className="flex items-center gap-3">
+                          {author.profile_picture ? (
+                            <img 
+                              src={author.profile_picture} 
+                              alt="Profile" 
+                              className="h-10 w-10 rounded-full object-cover border border-[#3D3A6B]" 
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-[#E8856A]/10 border border-[#3D3A6B] flex items-center justify-center">
+                              <span className="material-symbols-outlined text-xl text-[#3D3A6B]">account_circle</span>
+                            </div>
+                          )}
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-sm text-[#3D3A6B]">{author.full_name || 'Anonim'}</span>
+                              <span className="text-xs text-[#3D3A6B]/60 font-semibold">@{author.username || 'username'}</span>
+                              {isAuthorDev && (
+                                <span className="bg-[#3D3A6B] text-white text-[9px] font-extrabold px-2 py-0.5 rounded-md border border-[#E8856A] flex items-center gap-0.5 select-none" style={{ height: '18px' }}>
+                                  <span className="material-symbols-outlined text-[9px] text-[#E8856A]" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>Dev ✦
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-[#3D3A6B]/50 font-bold uppercase">{dateStr}</span>
+                          </div>
+                        </div>
+
+                        {/* Category Badge */}
+                        <span 
+                          className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-md flex items-center gap-1 border"
+                          style={{ backgroundColor: currentBadge.bg, color: currentBadge.text, borderColor: `${currentBadge.text}30` }}
+                        >
+                          <span className="material-symbols-outlined text-xs">{currentBadge.icon}</span>
+                          {fb.category}
+                        </span>
+                      </div>
+
+                      {/* Post Content */}
+                      <div className="space-y-2">
+                        <h4 className="text-md font-extrabold text-[#3D3A6B]">{fb.title}</h4>
+                        <p className="text-sm text-[#3D3A6B]/80 leading-relaxed whitespace-pre-wrap">{fb.description}</p>
+                        
+                        {fb.image_url && (
+                          <div className="mt-3 overflow-hidden rounded-lg border-2 border-[#3D3A6B] max-w-md">
+                            <img 
+                              src={fb.image_url} 
+                              alt="Feedback Attachment" 
+                              className="w-full h-auto object-cover max-h-[300px]" 
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Comments Section */}
+                      <div className="bg-gray-50/50 rounded-xl p-4 border-2 border-[#3D3A6B]/10 space-y-4">
+                        <h5 className="text-xs font-extrabold text-[#3D3A6B] uppercase tracking-wider flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-xs">forum</span>
+                          Komentar ({fb.comments?.length || 0})
+                        </h5>
+                        
+                        {fb.comments && fb.comments.length > 0 && (
+                          <div className="space-y-3 divide-y divide-[#3D3A6B]/5">
+                            {fb.comments.map((comment: any) => {
+                              const isCommentDev = comment.is_developer || comment.username === 'mifdev0';
+                              return (
+                                <div key={comment.id} className={`pt-3 first:pt-0 flex gap-2 items-start ${isCommentDev ? 'bg-[#E8856A]/5 p-2 rounded-lg' : ''}`}>
+                                  {comment.profile_picture ? (
+                                    <img 
+                                      src={comment.profile_picture} 
+                                      alt="Avatar" 
+                                      className="h-7 w-7 rounded-full object-cover border border-[#3D3A6B] mt-0.5 shrink-0" 
+                                    />
+                                  ) : (
+                                    <div className="h-7 w-7 rounded-full bg-[#E8856A]/10 border border-[#3D3A6B] flex items-center justify-center shrink-0 mt-0.5">
+                                      <span className="material-symbols-outlined text-xs text-[#3D3A6B]">account_circle</span>
+                                    </div>
+                                  )}
+                                  <div className="flex-grow min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="text-xs font-bold text-[#3D3A6B]">{comment.user_name}</span>
+                                      <span className="text-[10px] text-[#3D3A6B]/60">@{comment.username}</span>
+                                      {isCommentDev && (
+                                        <span className="bg-[#3D3A6B] text-white text-[8px] font-extrabold px-1.5 py-0.5 rounded border border-[#E8856A] flex items-center gap-0.5 select-none" style={{ height: '14px' }}>
+                                          <span className="material-symbols-outlined text-[8px] text-[#E8856A]" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>Dev ✦
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-[#3D3A6B]/80 mt-1 whitespace-pre-wrap leading-relaxed">{comment.content}</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Add Comment Input Form */}
+                        <form onSubmit={(e) => handleAddComment(e, fb.id)} className="flex items-center gap-2 mt-2 pt-2 border-t border-[#3D3A6B]/5">
+                          <input
+                            type="text"
+                            value={commentInputs[fb.id] || ''}
+                            onChange={(e) => setCommentInputs({ ...commentInputs, [fb.id]: e.target.value })}
+                            placeholder="Tulis balasan atau tanggapan..."
+                            className="w-full bg-white sketch-border-sm border-[#3D3A6B] px-3 py-1.5 outline-none text-[#3D3A6B] text-xs focus:ring-1 focus:ring-[#E8856A]"
+                          />
+                          <button
+                            type="submit"
+                            className="doodle-btn px-3 py-1.5 bg-[#E8856A] text-[#3D3A6B] text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1"
+                          >
+                            <span className="material-symbols-outlined text-xs">send</span>
+                            Balas
+                          </button>
+                        </form>
+                      </div>
+
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+          </div>
+        )}
       </main>
 
       {/* Dynamic Vibe Assistant Speech Bubble */}
@@ -1151,25 +1549,32 @@ export default function Home() {
       )}
 
       {/* Floating AI Prompt Bar */}
-      <PromptBar onSend={handleSendPrompt} onUploadImage={handleUploadImage} isLoading={isLoading} lang={lang} />
+      {currentTab === 'calendar' && (
+        <PromptBar onSend={handleSendPrompt} onUploadImage={handleUploadImage} isLoading={isLoading} lang={lang} />
+      )}
 
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-white border-t-2 border-[#3D3A6B]">
-        <button className="flex flex-col items-center justify-center text-[#3D3A6B] px-4 py-2 hover:bg-[#E8856A]/10 transition-all active:scale-90 cursor-pointer">
-          <span className="material-symbols-outlined">edit_note</span>
-          <span className="text-label-sm">{t.journal}</span>
-        </button>
-        <button className="flex flex-col items-center justify-center doodle-btn bg-[#E8856A] text-[#3D3A6B] rounded-xl px-4 py-2 active:scale-90 cursor-pointer">
-          <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>calendar_month</span>
+        <button 
+          onClick={() => setCurrentTab('calendar')}
+          className={`flex flex-col items-center justify-center px-4 py-2 hover:bg-[#E8856A]/10 transition-all active:scale-90 cursor-pointer ${currentTab === 'calendar' ? 'doodle-btn bg-[#E8856A] text-[#3D3A6B] rounded-xl' : 'text-[#3D3A6B]'}`}
+        >
+          <span className="material-symbols-outlined" style={{ fontVariationSettings: currentTab === 'calendar' ? "'FILL' 1" : undefined }}>calendar_month</span>
           <span className="text-label-sm">{t.calendar}</span>
         </button>
-        <button className="flex flex-col items-center justify-center text-[#3D3A6B] px-4 py-2 hover:bg-[#E8856A]/10 transition-all active:scale-90 cursor-pointer">
-          <span className="material-symbols-outlined">mood</span>
-          <span className="text-label-sm">{t.vibes}</span>
+        <button 
+          onClick={() => setCurrentTab('forum')}
+          className={`flex flex-col items-center justify-center px-4 py-2 hover:bg-[#E8856A]/10 transition-all active:scale-90 cursor-pointer ${currentTab === 'forum' ? 'doodle-btn bg-[#E8856A] text-[#3D3A6B] rounded-xl' : 'text-[#3D3A6B]'}`}
+        >
+          <span className="material-symbols-outlined" style={{ fontVariationSettings: currentTab === 'forum' ? "'FILL' 1" : undefined }}>forum</span>
+          <span className="text-label-sm">Forum</span>
         </button>
-        <button className="flex flex-col items-center justify-center text-[#3D3A6B] px-4 py-2 hover:bg-[#E8856A]/10 transition-all active:scale-90 cursor-pointer">
-          <span className="material-symbols-outlined">analytics</span>
-          <span className="text-label-sm">{t.insights}</span>
+        <button 
+          onClick={openSettings}
+          className="flex flex-col items-center justify-center text-[#3D3A6B] px-4 py-2 hover:bg-[#E8856A]/10 transition-all active:scale-90 cursor-pointer"
+        >
+          <span className="material-symbols-outlined">settings</span>
+          <span className="text-label-sm">Profil</span>
         </button>
       </nav>
       {/* Settings / Profile Management Modal */}
