@@ -142,6 +142,8 @@ export default function Home() {
   // Username Availability Checking
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingRegisterUsername, setCheckingRegisterUsername] = useState(false);
+  const [registerUsernameAvailable, setRegisterUsernameAvailable] = useState<boolean | null>(null);
 
   // Feedback Forum States
   const [currentTab, setCurrentTab] = useState<'calendar' | 'forum'>('calendar');
@@ -270,6 +272,12 @@ export default function Home() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName || !email || !username || !password) return;
+    
+    if (registerUsernameAvailable === false) {
+      setAuthError('Username sudah digunakan oleh orang lain');
+      return;
+    }
+
     setIsLoading(true);
     setAuthError(null);
     try {
@@ -401,6 +409,30 @@ export default function Home() {
 
     return () => clearTimeout(delayDebounceFn);
   }, [editUsername, showSettingsModal]);
+
+  useEffect(() => {
+    if (!username.trim() || authMode !== 'register') {
+      setRegisterUsernameAvailable(null);
+      setCheckingRegisterUsername(false);
+      return;
+    }
+
+    setCheckingRegisterUsername(true);
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const response = await axios.post(`${API_BASE_URL}/api/auth/check-username`, {
+          username: username.trim(),
+        });
+        setRegisterUsernameAvailable(response.data.available);
+      } catch (err) {
+        console.error('Error checking register username:', err);
+      } finally {
+        setCheckingRegisterUsername(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [username, authMode]);
   // Forum Logic & Functions
   const fetchFeedbacks = async () => {
     try {
@@ -926,7 +958,27 @@ export default function Home() {
 
             {authMode === 'register' && (
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">{t.usernamePlaceholder}</label>
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">{t.usernamePlaceholder}</label>
+                  {checkingRegisterUsername && (
+                    <span className="text-[10px] text-[#3D3A6B]/60 font-bold flex items-center gap-0.5 animate-pulse">
+                      <span className="material-symbols-outlined text-xs animate-spin" style={{ fontSize: '12px' }}>progress_activity</span>
+                      Memeriksa...
+                    </span>
+                  )}
+                  {!checkingRegisterUsername && registerUsernameAvailable === true && (
+                    <span className="text-[10px] text-[#16A34A] font-bold flex items-center gap-0.5 animate-bounce">
+                      <span className="material-symbols-outlined text-xs text-[#16A34A]" style={{ fontSize: '12px', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                      Username Tersedia
+                    </span>
+                  )}
+                  {!checkingRegisterUsername && registerUsernameAvailable === false && (
+                    <span className="text-[10px] text-[#DC2626] font-bold flex items-center gap-0.5 animate-bounce">
+                      <span className="material-symbols-outlined text-xs text-[#DC2626]" style={{ fontSize: '12px' }}>cancel</span>
+                      Username Sudah Dipakai
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center bg-white sketch-border-sm border-[#3D3A6B] px-3 py-2 gap-2 focus-within:ring-2 focus-within:ring-[#E8856A]/50 transition-all">
                   <span className="material-symbols-outlined text-[#3D3A6B] opacity-60">alternate_email</span>
                   <input
