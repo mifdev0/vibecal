@@ -895,13 +895,6 @@ email: ${forgotEmail.trim()}`;
 
   const upcoming = getUpcomingEvents();
 
-  if (!isMounted) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <span className="material-symbols-outlined text-[#3D3A6B] animate-spin" style={{ fontSize: '32px' }}>progress_activity</span>
-      </div>
-    );
-  }
 
   if (!user && landingPageActive) {
     return (
