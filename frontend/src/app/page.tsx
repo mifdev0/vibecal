@@ -1,7 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Calendar from '@/components/Calendar';
+import dynamic from 'next/dynamic';
+
+const Calendar = dynamic(() => import('@/components/Calendar'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[600px] flex items-center justify-center bg-white border-2 border-[#3D3A6B] rounded-2xl sketch-border-sm animate-pulse">
+      <span className="material-symbols-outlined text-4xl animate-spin text-[#E8856A]">progress_activity</span>
+    </div>
+  )
+});
 import PromptBar from '@/components/PromptBar';
 import { getSessionId, API_BASE_URL, parseTitleAndLocation, urlBase64ToUint8Array } from '@/lib/utils';
 import axios from 'axios';

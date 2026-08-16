@@ -1,5 +1,20 @@
 import type { Metadata } from "next";
+import { Fredoka, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+
+const fredoka = Fredoka({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-fredoka",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800"],
+  variable: "--font-jetbrains",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "VibeCal ✦ — AI-Powered Harmony",
@@ -16,14 +31,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" className={`h-full antialiased ${fredoka.variable} ${jetbrainsMono.variable}`}>
       <head>
-        <link href="https://fonts.googleapis.com" rel="preconnect" />
-        <link crossOrigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-        <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet" />
       </head>
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full font-sans">{children}</body>
     </html>
   );
 }
