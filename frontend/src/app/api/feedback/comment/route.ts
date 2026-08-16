@@ -2,6 +2,37 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/server-utils';
 import crypto from 'crypto';
 
+// Helper to hydrate comments with latest user profiles
+async function hydrateComments(rawComments: any[]) {
+  if (!Array.isArray(rawComments) || rawComments.length === 0) return [];
+
+  const userIds = Array.from(new Set(rawComments.map(c => c.user_id).filter(Boolean)));
+  if (userIds.length === 0) return rawComments;
+
+  const { data: users } = await supabase
+    .from('users_custom')
+    .select('id, full_name, username, profile_picture, email')
+    .in('id', userIds);
+
+  const userMap: Record<string, any> = {};
+  if (users) {
+    users.forEach(u => {
+      userMap[u.id] = u;
+    });
+  }
+
+  return rawComments.map(c => {
+    const latestUser = userMap[c.user_id];
+    return {
+      ...c,
+      user_name: latestUser?.full_name || c.user_name,
+      username: latestUser?.username || c.username,
+      profile_picture: latestUser !== undefined ? latestUser.profile_picture : c.profile_picture,
+      is_developer: latestUser ? (latestUser.email?.toLowerCase() === 'mifthahulamri@gmail.com') : c.is_developer
+    };
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const { feedbackId, userId, content } = await request.json();
@@ -52,18 +83,18 @@ export async function POST(request: Request) {
     const updatedComments = [...currentComments, newComment];
 
     // 3. Update comments in database
-    const { data: updatedPost, error: updateErr } = await supabase
+    const { error: updateErr } = await supabase
       .from('feedback_forum')
       .update({ comments: updatedComments })
-      .eq('id', feedbackId)
-      .select('comments')
-      .single();
+      .eq('id', feedbackId);
 
     if (updateErr) throw updateErr;
 
+    const hydratedComments = await hydrateComments(updatedComments);
+
     return NextResponse.json({
       status: 'success',
-      comments: updatedPost.comments
+      comments: hydratedComments
     }, { status: 200 });
 
   } catch (error: any) {
@@ -120,18 +151,18 @@ export async function DELETE(request: Request) {
     const updatedComments = currentComments.filter((c: any) => c.id !== commentId);
 
     // 3. Update database
-    const { data: updatedPost, error: updateErr } = await supabase
+    const { error: updateErr } = await supabase
       .from('feedback_forum')
       .update({ comments: updatedComments })
-      .eq('id', feedbackId)
-      .select('comments')
-      .single();
+      .eq('id', feedbackId);
 
     if (updateErr) throw updateErr;
 
+    const hydratedComments = await hydrateComments(updatedComments);
+
     return NextResponse.json({
       status: 'success',
-      comments: updatedPost.comments
+      comments: hydratedComments
     });
 
   } catch (error: any) {
