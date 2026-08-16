@@ -909,7 +909,7 @@ email: ${forgotEmail.trim()}`;
         {/* Landing Page Header */}
         <header className="w-full px-6 py-4 flex justify-between items-center z-50 backdrop-blur-xl bg-surface/90 border-b-2 border-[#3D3A6B]/30 sticky top-0">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="VibeCal Logo" className="h-10 w-10 object-contain select-none" />
+            <img src="/logo.webp" alt="VibeCal Logo" width={40} height={40} className="h-10 w-10 object-contain select-none" />
             <span className="text-xl md:text-2xl font-extrabold select-none">VibeCal</span>
           </div>
           <button 
@@ -936,7 +936,7 @@ email: ${forgotEmail.trim()}`;
           <h1 className="text-4xl md:text-6xl font-extrabold leading-tight mb-6">
             Atur Jadwal & Vibe-mu dengan <span className="text-[#E8856A]">AI Planner</span> Premium
           </h1>
-          <p className="text-base md:text-lg opacity-85 mb-8 max-w-2xl mx-auto">
+          <p className="text-base md:text-lg text-[#3D3A6B] font-medium mb-8 max-w-2xl mx-auto">
             VibeCal menggabungkan kalender pintar, analisis mood, dan asisten AI pintar dalam satu antarmuka artistik doodle yang estetik. Cukup ketik rencana Anda secara natural, dan biarkan AI menyusun harinya untuk Anda.
           </p>
 
@@ -965,18 +965,18 @@ email: ${forgotEmail.trim()}`;
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16 text-left w-full">
             <div className="bento-card p-6 bg-white hover:shadow-[6px_6px_0px_#3D3A6B] transition-all">
               <span className="material-symbols-outlined text-[#E8856A] text-4xl mb-3">auto_awesome</span>
-              <h3 className="font-extrabold text-lg mb-2">Asisten AI Vibe</h3>
-              <p className="text-sm opacity-75">Tulis rencana kegiatan Anda dalam kalimat biasa, AI akan otomatis menjadwalkan ke kalender Anda.</p>
+              <h3 className="font-extrabold text-lg mb-2 text-[#3D3A6B]">Asisten AI Vibe</h3>
+              <p className="text-sm text-[#3D3A6B] leading-relaxed">Tulis rencana kegiatan Anda dalam kalimat biasa, AI akan otomatis menjadwalkan ke kalender Anda.</p>
             </div>
             <div className="bento-card p-6 bg-white hover:shadow-[6px_6px_0px_#3D3A6B] transition-all">
               <span className="material-symbols-outlined text-[#7C74C9] text-4xl mb-3">palette</span>
-              <h3 className="font-extrabold text-lg mb-2">Desain Doodle Estetik</h3>
-              <p className="text-sm opacity-75">Tampilan premium bernuansa doodle retro yang memanjakan mata dan membuat produktivitas lebih menyenangkan.</p>
+              <h3 className="font-extrabold text-lg mb-2 text-[#3D3A6B]">Desain Doodle Estetik</h3>
+              <p className="text-sm text-[#3D3A6B] leading-relaxed">Tampilan premium bernuansa doodle retro yang memanjakan mata dan membuat produktivitas lebih menyenangkan.</p>
             </div>
             <div className="bento-card p-6 bg-white hover:shadow-[6px_6px_0px_#3D3A6B] transition-all">
               <span className="material-symbols-outlined text-[#5C8A6E] text-4xl mb-3">center_focus_strong</span>
-              <h3 className="font-extrabold text-lg mb-2">Ekstrak Instan</h3>
-              <p className="text-sm opacity-75">Cukup unggah foto roster, jadwal kuliah, atau shift kerja Anda, dan AI akan merangkum semuanya.</p>
+              <h3 className="font-extrabold text-lg mb-2 text-[#3D3A6B]">Ekstrak Instan</h3>
+              <p className="text-sm text-[#3D3A6B] leading-relaxed">Cukup unggah foto roster, jadwal kuliah, atau shift kerja Anda, dan AI akan merangkum semuanya.</p>
             </div>
           </div>
         </main>
@@ -1009,8 +1009,10 @@ email: ${forgotEmail.trim()}`;
         <div className="bento-card max-w-[420px] w-full p-8 relative bg-white">
           <div className="text-center mb-6 flex flex-col items-center justify-center">
             <img 
-              src="/logo.png" 
+              src="/logo.webp" 
               alt="VibeCal Logo" 
+              width={64}
+              height={64}
               className="h-16 w-16 object-contain select-none mb-3" 
             />
             <h1 className="text-3xl font-extrabold text-[#3D3A6B]" style={{ fontFamily: "'Fredoka', sans-serif" }}>
@@ -1179,8 +1181,10 @@ email: ${forgotEmail.trim()}`;
                 />
               ) : (
                 <img 
-                  src="/logo.png" 
+                  src="/logo.webp" 
                   alt="VibeCal Logo" 
+                  width={40}
+                  height={40}
                   className="h-10 w-10 object-contain select-none" 
                 />
               )}

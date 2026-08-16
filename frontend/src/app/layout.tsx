@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   description: "Natural language smart calendar scheduling. Talk or type to instantly plan your day, week, or month.",
   manifest: "/manifest.json",
   icons: {
-    icon: "/logo.png",
+    icon: "/logo.webp",
   },
 };
 
@@ -33,7 +33,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`h-full antialiased ${fredoka.variable} ${jetbrainsMono.variable}`}>
       <head>
-        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
       </head>
       <body className="min-h-full font-sans">{children}</body>
     </html>
