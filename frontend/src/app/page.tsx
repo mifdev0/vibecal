@@ -138,7 +138,10 @@ export default function Home() {
   const [editConfirmPassword, setEditConfirmPassword] = useState('');
   const [editError, setEditError] = useState<string | null>(null);
   const [editSuccess, setEditSuccess] = useState<string | null>(null);
-
+  // Forgot Password Modal State
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [forgotName, setForgotName] = useState('');
+  const [forgotEmail, setForgotEmail] = useState('');
   // Username Availability Checking
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
@@ -546,6 +549,20 @@ export default function Home() {
       console.error('Error deleting comment:', err);
       alert(err.response?.data?.error || 'Gagal menghapus komentar');
     }
+  };
+
+  const handleForgotSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotName.trim() || !forgotEmail.trim()) return;
+
+    const message = `Halo kak, saya mengajukan reset password dengan detail akun :
+nama: ${forgotName.trim()}
+email: ${forgotEmail.trim()}`;
+
+    const encodedText = encodeURIComponent(message);
+    const waUrl = `https://wa.me/6285716823315?text=${encodedText}`;
+    window.open(waUrl, '_blank');
+    setShowForgotPasswordModal(false);
   };
 
   const handleDeleteFeedback = async (feedbackId: string) => {
@@ -1028,14 +1045,17 @@ export default function Home() {
               </div>
               {authMode === 'login' && (
                 <div className="flex justify-end mt-1">
-                  <a 
-                    href="https://wa.me/6285716823315?text=Halo%20Admin%20VibeCal%2C%20saya%20lupa%20password%20dan%20ingin%20meminta%20reset%20password%20akun%20saya." 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-[11px] font-bold text-[#E8856A] hover:underline flex items-center gap-1.5"
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setForgotName('');
+                      setForgotEmail('');
+                      setShowForgotPasswordModal(true);
+                    }}
+                    className="text-[11px] font-bold text-[#E8856A] hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none outline-none"
                   >
-                    <span className="material-symbols-outlined text-xs" style={{ fontSize: '14px' }}>chat</span> Lupa Password? Hubungi Admin (WA)
-                  </a>
+                    Lupa Password?
+                  </button>
                 </div>
               )}
             </div>
@@ -1918,6 +1938,75 @@ export default function Home() {
           <span className="text-label-sm">Profil</span>
         </button>
       </nav>
+      {/* Forgot Password Modal */}
+      {showForgotPasswordModal && (
+        <div className="fixed inset-0 bg-[#3D3A6B]/50 backdrop-blur-md flex items-center justify-center z-[100] p-4 overflow-y-auto" style={{ fontFamily: "'Fredoka', sans-serif" }}>
+          <div className="bento-card max-w-[420px] w-full p-6 bg-white relative animate-in zoom-in-95 duration-200">
+            
+            {/* Modal Header */}
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-extrabold text-[#3D3A6B] flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#E8856A]">lock_reset</span>
+                Reset Password
+              </h3>
+              <button 
+                type="button"
+                onClick={() => setShowForgotPasswordModal(false)}
+                className="p-1 hover:bg-[#E8856A]/10 rounded-full transition-colors cursor-pointer text-[#3D3A6B] opacity-60 hover:opacity-100 flex items-center justify-center border-none bg-transparent"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
+              </button>
+            </div>
+
+            <p className="text-xs text-[#3D3A6B]/80 mb-4 leading-relaxed font-medium">
+              Silakan isi detail akun Anda di bawah ini. Pengajuan reset password akan diarahkan ke WhatsApp Admin.
+            </p>
+
+            <form onSubmit={handleForgotSubmit} className="space-y-4">
+              {/* Nama Lengkap */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">Nama Lengkap</label>
+                <div className="flex items-center bg-white sketch-border-sm border-[#3D3A6B] px-3 py-2 gap-2 focus-within:ring-2 focus-within:ring-[#E8856A]/50 transition-all">
+                  <span className="material-symbols-outlined text-[#3D3A6B] opacity-60 text-sm">badge</span>
+                  <input
+                    type="text"
+                    required
+                    value={forgotName}
+                    onChange={e => setForgotName(e.target.value)}
+                    placeholder="Nama Lengkap Anda"
+                    className="w-full bg-transparent outline-none text-[#3D3A6B] text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Email */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-[#3D3A6B] uppercase tracking-wider">Email</label>
+                <div className="flex items-center bg-white sketch-border-sm border-[#3D3A6B] px-3 py-2 gap-2 focus-within:ring-2 focus-within:ring-[#E8856A]/50 transition-all">
+                  <span className="material-symbols-outlined text-[#3D3A6B] opacity-60 text-sm">mail</span>
+                  <input
+                    type="email"
+                    required
+                    value={forgotEmail}
+                    onChange={e => setForgotEmail(e.target.value)}
+                    placeholder="nama@email.com"
+                    className="w-full bg-transparent outline-none text-[#3D3A6B] text-sm"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="doodle-btn bg-[#E8856A] text-[#3D3A6B] w-full py-2.5 rounded-xl font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5 text-sm mt-2"
+              >
+                <span className="material-symbols-outlined text-sm">send</span>
+                Kirim ke WhatsApp Admin ✦
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Settings / Profile Management Modal */}
       {showSettingsModal && (
         <div className="fixed inset-0 bg-[#3D3A6B]/50 backdrop-blur-md flex items-center justify-center z-[100] p-4 overflow-y-auto" style={{ fontFamily: "'Fredoka', sans-serif" }}>
