@@ -234,6 +234,7 @@ export default function Home() {
         const parsedUser = JSON.parse(savedUser);
         setUser(parsedUser);
         setUserId(parsedUser.id);
+        fetchUserProfile(parsedUser.id);
         fetchEvents(parsedUser.id);
         setupNotifications(parsedUser.id);
         setLandingPageActive(false);
@@ -246,6 +247,19 @@ export default function Home() {
       setLandingPageActive(true);
     }
   }, []);
+
+  const fetchUserProfile = async (id: string) => {
+    if (!id) return;
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/auth/profile?userId=${id}`);
+      if (res.data?.status === 'success' && res.data.user) {
+        setUser(res.data.user);
+        localStorage.setItem('vibecal_user', JSON.stringify(res.data.user));
+      }
+    } catch (err) {
+      console.error('Failed to sync profile data:', err);
+    }
+  };
 
   useEffect(() => {
     if (isMounted) {
@@ -286,6 +300,7 @@ export default function Home() {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/events?userId=${id}`);
       setEvents(response.data);
+      fetchUserProfile(id);
     } catch (error) {
       console.error('Error fetching events:', error);
     } finally {
