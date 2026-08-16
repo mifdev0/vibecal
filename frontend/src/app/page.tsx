@@ -15,6 +15,52 @@ import PromptBar from '@/components/PromptBar';
 import { getSessionId, API_BASE_URL, parseTitleAndLocation, urlBase64ToUint8Array } from '@/lib/utils';
 import axios from 'axios';
 
+const compressImage = (file: File, maxWidth = 800, maxHeight = 800, quality = 0.7): Promise<string> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(event.target?.result as string);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressedBase64);
+      };
+      img.onerror = () => {
+        resolve(event.target?.result as string);
+      };
+    };
+    reader.onerror = () => {
+      resolve('');
+    };
+  });
+};
+
 const translations = {
   id: {
     memproses: "Memproses jadwal...",
@@ -331,7 +377,7 @@ export default function Home() {
     setShowSettingsModal(true);
   };
 
-  const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProfilePicChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -347,12 +393,12 @@ export default function Home() {
     }
 
     setEditError(null);
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setEditProfilePic(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImage(file, 300, 300, 0.7);
+      setEditProfilePic(compressed);
+    } catch (err) {
+      console.error('Error compressing profile picture:', err);
+    }
   };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -462,7 +508,7 @@ export default function Home() {
     }
   }, [currentTab]);
 
-  const handleFeedbackImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFeedbackImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -478,11 +524,12 @@ export default function Home() {
     }
 
     setForumError(null);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setFeedbackImage(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImage(file, 800, 800, 0.7);
+      setFeedbackImage(compressed);
+    } catch (err) {
+      console.error('Error compressing feedback image:', err);
+    }
   };
 
   const handleSubmitFeedback = async (e: React.FormEvent) => {
@@ -605,7 +652,7 @@ email: ${forgotEmail.trim()}`;
     setForumError(null);
   };
 
-  const handleEditFeedbackImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditFeedbackImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -621,11 +668,12 @@ email: ${forgotEmail.trim()}`;
     }
 
     setForumError(null);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setEditFeedbackImage(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImage(file, 800, 800, 0.7);
+      setEditFeedbackImage(compressed);
+    } catch (err) {
+      console.error('Error compressing feedback edit image:', err);
+    }
   };
 
   const handleSaveEditFeedback = async (e: React.FormEvent) => {
