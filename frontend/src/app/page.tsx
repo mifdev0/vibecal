@@ -581,7 +581,7 @@ export default function Home() {
       });
 
       if (response.data.status === 'success') {
-        setFeedbacks(feedbacks.map(f => f.id === feedbackId ? response.data.feedback : f));
+        setFeedbacks(feedbacks.map(f => f.id === feedbackId ? { ...f, comments: response.data.comments } : f));
         setCommentInputs({ ...commentInputs, [feedbackId]: '' });
       }
     } catch (err) {
@@ -599,7 +599,7 @@ export default function Home() {
         `${API_BASE_URL}/api/feedback/comment?feedbackId=${feedbackId}&commentId=${commentId}&userId=${userId}`
       );
       if (response.data.status === 'success') {
-        setFeedbacks(feedbacks.map(f => f.id === feedbackId ? response.data.feedback : f));
+        setFeedbacks(feedbacks.map(f => f.id === feedbackId ? { ...f, comments: response.data.comments } : f));
       }
     } catch (err: any) {
       console.error('Error deleting comment:', err);

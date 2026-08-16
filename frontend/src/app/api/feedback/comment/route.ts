@@ -56,17 +56,14 @@ export async function POST(request: Request) {
       .from('feedback_forum')
       .update({ comments: updatedComments })
       .eq('id', feedbackId)
-      .select(`
-        *,
-        author:users_custom(full_name, username, profile_picture, email)
-      `)
+      .select('comments')
       .single();
 
     if (updateErr) throw updateErr;
 
     return NextResponse.json({
       status: 'success',
-      feedback: updatedPost
+      comments: updatedPost.comments
     }, { status: 200 });
 
   } catch (error: any) {
@@ -127,17 +124,14 @@ export async function DELETE(request: Request) {
       .from('feedback_forum')
       .update({ comments: updatedComments })
       .eq('id', feedbackId)
-      .select(`
-        *,
-        author:users_custom(full_name, username, profile_picture, email)
-      `)
+      .select('comments')
       .single();
 
     if (updateErr) throw updateErr;
 
     return NextResponse.json({
       status: 'success',
-      feedback: updatedPost
+      comments: updatedPost.comments
     });
 
   } catch (error: any) {
